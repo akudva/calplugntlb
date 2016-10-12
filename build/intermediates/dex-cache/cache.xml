@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        is-multidex="true"
+        jar="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/exploded-aar/com.android.support/support-v4/21.0.3/jars/classes.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.1"
+        sha1="2c91c949a45a21cdecf26e03951e46c7beec9ad8">
+        <dex dex="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/transforms/dex/debug/folders/1000/10/com.android.support-support-v4-21.0.3_891c17ef39e5304832db86d323c88dda79c706c6/classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/exploded-aar/com.android.support/appcompat-v7/21.0.3/jars/classes.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.1"
+        sha1="81d42bf983a8741f4888a6e333e454e4a5e0eeb7">
+        <dex dex="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/transforms/dex/debug/folders/1000/10/com.android.support-appcompat-v7-21.0.3_31d4a1cd176b57791088ee7f21a0b8e98071da0d/classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="/Users/Zephyr/Library/Android/sdk/extras/android/m2repository/com/android/support/support-annotations/21.0.3/support-annotations-21.0.3.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.1"
+        sha1="4b74cefe1f0c1b819e7260c8627a14674e37fd35">
+        <dex dex="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/transforms/dex/debug/folders/1000/10/support-annotations-21.0.3_84becdfe6e1cfc24715d8a7e6141688463a3a924/classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/incremental-runtime-classes/debug/instant-run.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.1"
+        sha1="c63ef7473ffadf6e418b44beb85ba2e18320acf5">
+        <dex dex="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/transforms/dex/debug/folders/1000/10/instant-run_8799df403693308fef5f62c0cb2f8a560cb1fcdf/classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/exploded-aar/com.android.support/support-v4/21.0.3/jars/libs/internal_impl-21.0.3.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.1"
+        sha1="01ec05bfbafcc07646ba813000bf2ef11742dd03">
+        <dex dex="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/transforms/dex/debug/folders/1000/10/internal_impl-21.0.3_e032219d9de464ffd14dfe314db6301630b6c338/classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/incremental-classes/debug/instant-run-bootstrap.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.1"
+        sha1="0e571733e000b1829161e8d6435612d2967013ca">
+        <dex dex="/Users/Zephyr/Document/2016 Calit2 RSI Locator/SRI_heatmap/app/build/intermediates/transforms/dex/debug/folders/1000/10/instant-run-bootstrap_f91dec02a862559f031822143426dfef856d868f/classes.dex" />
+    </item>
+
+</items>

@@ -1,0 +1,14 @@
+Feb 12, 2016
+
+Bluetooth done last week. 
+
+Solved black pixel.
+MatGridRenderer: setAverageColor
+	Removed:
+	    colorArray[index][0] = orgRed + fillCount * tGrid * ( tarRed - orgRed);
+        colorArray[index][1] = orgGreen + fillCount * tGrid * (tarGreen - orgGreen);
+        colorArray[index][2] = colorArray[index][2];
+        colorArray[index][3] = colorArray[index][3];
+    Added:
+    	colorArray[index][0] = Math.max(orgRed + fillCount * tGrid * ( tarRed - orgRed), 0.0f);
+        colorArray[index][1] = Math.max(orgGreen + fillCount * tGrid * (tarGreen - orgGreen), 0.0f);

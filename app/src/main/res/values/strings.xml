@@ -1,0 +1,21 @@
+<resources>
+    <string name="title_activity_gl_viewer">RSI Locator</string>
+    <string name="title_activity_pair">PairActivity</string>
+    <string name="title_activity_connect">ConnectActivity</string>
+    <string name="title_activity_main">BluetoothSRI</string>
+
+    <string name="label_pair_list">Devices in range:</string>
+    <string name="label_connect_list">Connected devices:</string>
+    <string name="button_display_tile">Display Tile</string>
+    <string name="button_display_mat">Display Mat</string>
+    <string name="button_connect">Connect</string>
+    <string name="button_pair">Pair</string>
+
+    <string name="button_before">Save Before</string>
+    <string name="button_show_before">Show Before</string>
+    <string name="button_after">Save After</string>
+    <string name="button_show_after">Show After</string>
+    <string name="button_get_after">Get After</string>
+    <string name="button_compare">Difference</string>
+    <string name="button_clear">Clear</string>
+</resources>

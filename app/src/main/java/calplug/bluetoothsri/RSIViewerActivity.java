@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -39,6 +40,7 @@ public class RSIViewerActivity extends ActionBarActivity {
     protected static boolean hasPreSurgeryData = false;
     protected static boolean hasPostSurgeryData = false;
     protected static boolean hasDisplayedDiff = false;
+    private static final String TAG = "RSIVIEWER";
 
     private final int column = 30;
     private final int row = 30;
@@ -74,6 +76,7 @@ public class RSIViewerActivity extends ActionBarActivity {
 
         // get data pool from main activity
         //
+        Log.d("RSIVIEWER", "Printing out the DataPool stuff!");
         getDataPool();
         System.out.println(Arrays.toString(dataPoolArray)); // print dataPoolArray for debug
         int thetaList[];
@@ -85,17 +88,56 @@ public class RSIViewerActivity extends ActionBarActivity {
         heatMap.setVerbose(false);
         List<ChartData> samplePoints = new ArrayList();
 
-        samplePoints.add(new ChartData("R10", "C10", thetaList[0]));
-        samplePoints.add(new ChartData("R10", "C20", thetaList[1]));
-        samplePoints.add(new ChartData("R20", "C10", thetaList[2]));
-        samplePoints.add(new ChartData("R20", "C20", thetaList[3]));
+//        int[][] magnetometer_locations = new int[][]
+//                      { { 1,  1},
+//                        { 1, 20},
+//                        {20,  1},
+//                        {20, 20} };
+
+        // Locations of magnetometers for a 30x30 grid
+        int[][] magnetometer_locations = new int[][]
+                      { { 2, 28},
+                        {28, 28},
+                        {28,  2},
+                        { 2,  2},
+                        { 8, 22},
+                        {22, 22},
+                        {22,  8},
+                        { 8,  8} };
+
+        // Keep track of the highest theta so that we can pass it to limitsHelper later
+        int max_theta= 0;
+        for (int i = 0; i < magnetometer_locations.length; ++i)
+        {
+            // Some of the magnetometers are reading very high values all the time
+            // e.g. 2035,1151,2043. If we get these, ignore that magnetometer...
+            if (dataPoolArray[i*3] > 1900)
+            {
+                String log_string = String.format("Magnetometer reading %d, %d, %d (mag. #%d) looks suspect... Skipping...",
+                        dataPoolArray[i*3],
+                        dataPoolArray[i*3+1],
+                        dataPoolArray[i*3+2],
+                        i+1);
+                Log.d("RSIVIEWER", log_string);
+                continue;
+            }
+
+            if (thetaList[i] > max_theta)
+                max_theta = thetaList[i];
+
+            String row = String.format("R%d", magnetometer_locations[i][1]);
+            String col = String.format("C%d", magnetometer_locations[i][0]);
+            samplePoints.add(new ChartData(row, col, thetaList[i]));
+            String log_info = String.format("Adding %d to position %s %s!", thetaList[i], row, col);
+            Log.d("RSIVIEWER", log_info);
+        }
 
         HeatMapDataConstructor mDataConstructor =
                 new HeatMapDataConstructor(row,
                         column,
                         samplePoints);
 
-        heatMap.setLimitsHelper(step, dataRange);
+        heatMap.setLimitsHelper(step, max_theta);
         heatMap.setColsRowsHelper(row, column);
         heatMap.setDataHelper(mDataConstructor);
     }

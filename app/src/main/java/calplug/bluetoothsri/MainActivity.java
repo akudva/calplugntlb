@@ -13,8 +13,17 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import calplug.bluetoothsri.com.MAVLink.MAVLinkPacket;
+import calplug.bluetoothsri.com.MAVLink.Messages.MAVLinkMessage;
+import calplug.bluetoothsri.com.MAVLink.common.msg_tile_measurements_eight;
+import calplug.bluetoothsri.com.MAVLink.common.*;
+import calplug.bluetoothsri.com.MAVLink.Parser;
+
 import java.io.IOException;
 import java.util.Stack;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+
 
 import calplug.bluetoothsri.bluetoothUtility.BluetoothConnectionListener;
 import calplug.bluetoothsri.bluetoothUtility.ConnectionStateChangedListener;
@@ -30,6 +39,9 @@ public class MainActivity extends ActionBarActivity {
     private int toastShort = Toast.LENGTH_SHORT;
     private CharSequence noEnoughData = "No enough data to process.";
     private CharSequence wrongDataFormat = "Wrong data format.";
+
+    public static Parser mavParser = new Parser();
+
 
     private Context context = null;
     private EditText terminalRx = null;
@@ -77,7 +89,36 @@ public class MainActivity extends ActionBarActivity {
                              @Override
                              public void run() {
                                  //recieve incoming data and append to TerminalRX string
-                                 terminalRx.append(new String(data));
+
+                                 // Print out hex of the incoming data
+//                                 for (int i = 0; i < data.length; ++i) {
+//                                     String terminal_string = String.format("%02x ", data[i]);
+//                                     terminalRx.append(terminal_string);
+//                                 }
+
+                                 // TODO: Figure out why we have to convert this to a ByteArrayInputStream
+                                 InputStream is = new ByteArrayInputStream(data);
+                                 try {
+                                     while(is.available() > 0) {
+                                         MAVLinkPacket packet = mavParser.mavlink_parse_char(is.read());
+                                         if(packet != null){
+                                             terminalRx.append(String.format("msgid: %d", packet.msgid));
+                                             msg_tile_measurements_eight rcvd_msg = new msg_tile_measurements_eight(packet);
+                                             for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
+                                             {
+                                                 terminalRx.append(String.format("%.2f", rcvd_msg.mag_data[i]));
+                                                 terminalRx.append(", ");
+                                             }
+                                             terminalRx.append("");
+                                             terminalRx.append(rcvd_msg.toString());
+                                         }
+                                     }
+                                     System.out.println("End tlog");
+                                 } catch (IOException e) {
+                                     e.printStackTrace();
+                                 }
+
+
                              }
                          });
                      }

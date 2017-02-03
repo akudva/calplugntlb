@@ -102,15 +102,21 @@ public class MainActivity extends ActionBarActivity {
                                      while(is.available() > 0) {
                                          MAVLinkPacket packet = mavParser.mavlink_parse_char(is.read());
                                          if(packet != null){
-                                             terminalRx.append(String.format("msgid: %d", packet.msgid));
+                                             // terminalRx.append(String.format("msgid: %d", packet.msgid));
                                              msg_tile_measurements_eight rcvd_msg = new msg_tile_measurements_eight(packet);
                                              for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
                                              {
-                                                 terminalRx.append(String.format("%.2f", rcvd_msg.mag_data[i]));
-                                                 terminalRx.append(", ");
+                                                 terminalRx.append(String.format("%d", (int) rcvd_msg.mag_data[i]));
+                                                 if ( (i+1) % 3 == 0)
+                                                 {
+                                                     terminalRx.append(";");
+                                                 } else
+                                                 {
+                                                     terminalRx.append(",");
+                                                 }
                                              }
-                                             terminalRx.append("");
-                                             terminalRx.append(rcvd_msg.toString());
+                                             // terminalRx.append("");
+                                             // terminalRx.append(rcvd_msg.toString());
                                          }
                                      }
                                      System.out.println("End tlog");

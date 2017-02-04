@@ -93,6 +93,8 @@ public class RSIViewerActivity extends ActionBarActivity {
         int max_theta = 0;
         int[] thetaList;
 
+        dataPoolArray = new int[24];
+
         if (false) {
             // Get data pool from main activity
             getDataPool();
@@ -173,7 +175,8 @@ public class RSIViewerActivity extends ActionBarActivity {
                                              msg_tile_measurements_eight rcvd_msg = new msg_tile_measurements_eight(packet);
                                              for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
                                              {
-                                                 // dataPoolArray[i] = (int) rcvd_msg.mag_data[i];
+                                                 dataPoolArray[i] = (int) rcvd_msg.mag_data[i];
+                                                 Log.d("DACODA", Arrays.toString(dataPoolArray));
                                                  Log.d("DACODA", String.format("%d", (int) rcvd_msg.mag_data[i]));
                                                  if ( (i+1) % 3 == 0)
                                                  {

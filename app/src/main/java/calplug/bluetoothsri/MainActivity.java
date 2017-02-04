@@ -40,7 +40,7 @@ public class MainActivity extends ActionBarActivity {
     private CharSequence noEnoughData = "No enough data to process.";
     private CharSequence wrongDataFormat = "Wrong data format.";
 
-    public static Parser mavParser = new Parser();
+    private static Parser mavParser = new Parser();
 
 
     private Context context = null;
@@ -215,7 +215,7 @@ public class MainActivity extends ActionBarActivity {
             public void OnClickSecondary () {
                 // send acquire signal to partner
                 //
-                String acquire = "HELLO*";
+                String acquire = "2";
                 try {
                     ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
                 } catch (IOException e) {

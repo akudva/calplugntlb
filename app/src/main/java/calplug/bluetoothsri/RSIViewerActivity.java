@@ -13,15 +13,25 @@ import android.widget.Toast;
 
 import org.json.JSONArray;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import calplug.bluetoothsri.bluetoothUtility.ConnectionHandler;
+import calplug.bluetoothsri.bluetoothUtility.BluetoothConnectionListener;
+import calplug.bluetoothsri.com.MAVLink.MAVLinkPacket;
+import calplug.bluetoothsri.com.MAVLink.Parser;
+import calplug.bluetoothsri.com.MAVLink.common.msg_tile_measurements_eight;
 import calplug.bluetoothsri.heatMapUtility.ChartData;
 import calplug.bluetoothsri.heatMapUtility.HeatMap;
 import calplug.bluetoothsri.heatMapUtility.HeatMapDataConstructor;
 import calplug.bluetoothsri.heatMapUtility.HeatMapHelper;
 import calplug.bluetoothsri.mathUtility.vectorMath;
+
+import calplug.bluetoothsri.com.MAVLink.Parser;
 
 /**
  * RSIViewerActivity create SRIViewerCanvas, implements vector calculations
@@ -31,6 +41,7 @@ import calplug.bluetoothsri.mathUtility.vectorMath;
 public class RSIViewerActivity extends ActionBarActivity {
 
     private Context context = null;
+    private static Parser mavParser = new Parser();
 
     protected static int[] dataPoolArray; // the array to display
     protected static int[] dataArrayBefore, dataArrayAfter; // pre-surgery and post-surgery data
@@ -74,19 +85,21 @@ public class RSIViewerActivity extends ActionBarActivity {
         setButtonStyles(buttonAfter, buttonBefore, buttonCompare);
         setButtonClickEvents(buttonAfter, buttonBefore, buttonCompare, buttonClear);
 
-        // get data pool from main activity
-        //
-        Log.d("RSIVIEWER", "Printing out the DataPool stuff!");
-        getDataPool();
-        System.out.println(Arrays.toString(dataPoolArray)); // print dataPoolArray for debug
-        int thetaList[];
-        thetaList = vectorMath.getThetaList(dataPoolArray);
-        System.out.println(Arrays.toString(thetaList)); // print theta list for debug
-
         // initialize sample matrix
         //
         heatMap.setVerbose(false);
         List<ChartData> samplePoints = new ArrayList();
+        // Keep track of the highest theta so that we can pass it to limitsHelper later
+        int max_theta = 0;
+        int[] thetaList;
+
+        if (false) {
+            // Get data pool from main activity
+            getDataPool();
+            // System.out.println(Arrays.toString(dataPoolArray));
+
+            thetaList = vectorMath.getThetaList(dataPoolArray);
+            System.out.println(Arrays.toString(thetaList)); // print theta list for debug
 
 //        int[][] magnetometer_locations = new int[][]
 //                      { { 1,  1},
@@ -94,52 +107,103 @@ public class RSIViewerActivity extends ActionBarActivity {
 //                        {20,  1},
 //                        {20, 20} };
 
-        // Locations of magnetometers for a 30x30 grid
-        int[][] magnetometer_locations = new int[][]
-                      { { 2, 28},
-                        {28, 28},
-                        {28,  2},
-                        { 2,  2},
-                        { 8, 22},
-                        {22, 22},
-                        {22,  8},
-                        { 8,  8} };
+            // Locations of magnetometers for a 30x30 grid
+            int[][] magnetometer_locations = new int[][]
+                    {{2, 28},
+                            {28, 28},
+                            {28, 2},
+                            {2, 2},
+                            {8, 22},
+                            {22, 22},
+                            {22, 8},
+                            {8, 8}};
 
-        // Keep track of the highest theta so that we can pass it to limitsHelper later
-        int max_theta= 0;
-        for (int i = 0; i < magnetometer_locations.length; ++i)
-        {
-            // Some of the magnetometers are reading very high values all the time
-            // e.g. 2035,1151,2043. If we get these, ignore that magnetometer...
-            if (dataPoolArray[i*3] > 1900)
-            {
-                String log_string = String.format("Magnetometer reading %d, %d, %d (mag. #%d) looks suspect... Skipping...",
-                        dataPoolArray[i*3],
-                        dataPoolArray[i*3+1],
-                        dataPoolArray[i*3+2],
-                        i+1);
-                Log.d("RSIVIEWER", log_string);
-                continue;
+            for (int i = 0; i < magnetometer_locations.length; ++i) {
+                // Some of the magnetometers are reading very high values all the time
+                // e.g. 2035,1151,2043. If we get these, ignore that magnetometer...
+                if (dataPoolArray[i * 3] > 1900) {
+                    String log_string = String.format("Magnetometer reading %d, %d, %d (mag. #%d) looks suspect... Skipping...",
+                            dataPoolArray[i * 3],
+                            dataPoolArray[i * 3 + 1],
+                            dataPoolArray[i * 3 + 2],
+                            i + 1);
+                    Log.d("RSIVIEWER", log_string);
+                    continue;
+                }
+
+                if (thetaList[i] > max_theta)
+                    max_theta = thetaList[i];
+
+                String row = String.format("R%d", magnetometer_locations[i][1]);
+                String col = String.format("C%d", magnetometer_locations[i][0]);
+                samplePoints.add(new ChartData(row, col, thetaList[i]));
+                String log_info = String.format("Adding %d to position %s %s!", thetaList[i], row, col);
+                Log.d("RSIVIEWER", log_info);
             }
-
-            if (thetaList[i] > max_theta)
-                max_theta = thetaList[i];
-
-            String row = String.format("R%d", magnetometer_locations[i][1]);
-            String col = String.format("C%d", magnetometer_locations[i][0]);
-            samplePoints.add(new ChartData(row, col, thetaList[i]));
-            String log_info = String.format("Adding %d to position %s %s!", thetaList[i], row, col);
-            Log.d("RSIVIEWER", log_info);
+        } else {
+            samplePoints.add(new ChartData("R10", "C10", 0 ));
+            max_theta = 90;
         }
-
-        HeatMapDataConstructor mDataConstructor =
+         HeatMapDataConstructor mDataConstructor =
                 new HeatMapDataConstructor(row,
                         column,
                         samplePoints);
 
-        heatMap.setLimitsHelper(step, max_theta);
-        heatMap.setColsRowsHelper(row, column);
-        heatMap.setDataHelper(mDataConstructor);
+         heatMap.setLimitsHelper(step, max_theta);
+         heatMap.setColsRowsHelper(row, column);
+         heatMap.setDataHelper(mDataConstructor);
+
+
+        ConnectionHandler.getInstance().addBluetoothConnectionListener
+                (new BluetoothConnectionListener() {
+                     @Override
+                     public void dataReceived(final byte[] data) {
+                         runOnUiThread(new Runnable() {
+                             @Override
+                             public void run() {
+                                 // Log.d("DACODA", "Got something new on Bluetooth!");
+
+                                 // TODO: Figure out why we have to convert this to a ByteArrayInputStream
+                                 InputStream is = new ByteArrayInputStream(data);
+                                 try {
+                                     while(is.available() > 0) {
+                                         MAVLinkPacket packet = mavParser.mavlink_parse_char(is.read());
+                                         if(packet != null){
+                                             // terminalRx.append(String.format("msgid: %d", packet.msgid));
+                                             msg_tile_measurements_eight rcvd_msg = new msg_tile_measurements_eight(packet);
+                                             for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
+                                             {
+                                                 // dataPoolArray[i] = (int) rcvd_msg.mag_data[i];
+                                                 Log.d("DACODA", String.format("%d", (int) rcvd_msg.mag_data[i]));
+                                                 if ( (i+1) % 3 == 0)
+                                                 {
+                                                     Log.d("DACODA", ";");
+                                                 } else
+                                                 {
+                                                     Log.d("DACODA", ",");
+                                                 }
+                                             }
+                                             // Log.d("DACODA", "");
+                                             // Log.d("DACODA", rcvd_msg.toString());
+                                         }
+                                     }
+                                     System.out.println("End tlog");
+                                 } catch (IOException e) {
+                                     e.printStackTrace();
+                                 }
+
+                             }
+                         });
+                     }
+                 }
+                );
+
+        String acquire = "2";
+        try {
+            ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**

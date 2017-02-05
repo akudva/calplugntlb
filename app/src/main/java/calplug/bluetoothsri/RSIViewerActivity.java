@@ -69,18 +69,16 @@ public class RSIViewerActivity extends ActionBarActivity {
         samplePoints = new ArrayList();
 
         if (dataPoolArray != null) {
-            thetaList = vectorMath.getThetaList(dataPoolArray);
-            // System.out.println(Arrays.toString(thetaList)); // print theta list for debug
+            if (dataArrayBefore != null)
+            {
+                dataPoolArray = getVectorDifference(dataArrayBefore, dataPoolArray);
+            }
 
-//        int[][] magnetometer_locations = new int[][]
-//                      { { 1,  1},
-//                        { 1, 20},
-//                        {20,  1},
-//                        {20, 20} };
+            thetaList = vectorMath.getThetaList(dataPoolArray);
 
             // Locations of magnetometers for a 30x30 grid
             int[][] magnetometer_locations = new int[][]
-                    {{2, 28},
+                           {{2, 28},
                             {28, 28},
                             {28, 2},
                             {2, 2},
@@ -108,6 +106,14 @@ public class RSIViewerActivity extends ActionBarActivity {
                 String row = String.format("R%d", magnetometer_locations[i][1]);
                 String col = String.format("C%d", magnetometer_locations[i][0]);
                 samplePoints.add(new ChartData(row, col, thetaList[i]));
+
+                Log.d("DACODA", "\n\nHeat map information:");
+                for (int j = 0; j < 8; ++j)
+                {
+                    Log.d("DACODA", String.format("Tile %d: %5d, %5d, %5d -> %3d -> %3d, %3d", j, dataPoolArray[3*j], dataPoolArray[3*j+1], dataPoolArray[3*j+2],
+                            thetaList[j], magnetometer_locations[j][0],
+                            magnetometer_locations[j][1]));
+                }
                 // String log_info = String.format("Adding %d to position %s %s!", thetaList[i], row, col);
                 // Log.d("RSIVIEWER", log_info);
             }
@@ -186,28 +192,22 @@ public class RSIViewerActivity extends ActionBarActivity {
                                              for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
                                              {
                                                  dataPoolArray[i] = (int) rcvd_msg.mag_data[i];
-                                                 // Log.d("DACODA", Arrays.toString(dataPoolArray));
                                                  // Log.d("DACODA", String.format("%d", (int) rcvd_msg.mag_data[i]));
-                                                 if ( (i+1) % 3 == 0)
-                                                 {
-                                                     Log.d("DACODA", ";");
-                                                 } else
-                                                 {
-                                                     Log.d("DACODA", ",");
-                                                 }
+                                             }
+
+
+                                             createHeatMap();
+                                             String acquire = "2";
+                                             try {
+                                                 ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
+                                             } catch (IOException e) {
+                                                 e.printStackTrace();
                                              }
                                              // Log.d("DACODA", "");
                                              // Log.d("DACODA", rcvd_msg.toString());
                                          }
                                      }
                                      // System.out.println("End tlog");
-                                     createHeatMap();
-                                     String acquire = "2";
-                                     try {
-                                         ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
-                                     } catch (IOException e) {
-                                         e.printStackTrace();
-                                     }
                                  } catch (IOException e) {
                                      e.printStackTrace();
                                  }
@@ -244,56 +244,38 @@ public class RSIViewerActivity extends ActionBarActivity {
                                         final Button buttonClear) {
         buttonBefore.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                if (hasDisplayedDiff) {
-                    // display pre-surgery data
-                    //
-                    Intent glIntent = new Intent(context, RSIViewerActivity.class);
-                    glIntent.putExtra("dataPoolArray", dataArrayBefore);
-                    glIntent.putExtra("method", 1);
-                    startActivity(glIntent);
-                } else {
-                    // record vectors before surgery
-                    //
-                    dataArrayBefore = dataPoolArray;
-                    Toast.makeText(getApplicationContext(), "Data saved.",
+                // Have to do clone to make sure that dataArrayBefore doesn't just use the same reference
+                dataArrayBefore = dataPoolArray.clone();
+                Toast.makeText(getApplicationContext(), "Saved baseline...",
                             Toast.LENGTH_LONG).show();
-
-                    acquirePostSurgeryData = false; //reset post-surgery flag to false
-                    hasPostSurgeryData = false;
-                    hasDisplayedDiff = false;
-                    hasPreSurgeryData = true;
-
-                    buttonAfter.setText(getString(R.string.button_get_after));
-                    buttonAfter.setEnabled(true);
-                    buttonCompare.setEnabled(false);
-                }
             }
         });
 
         buttonAfter.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                if (hasDisplayedDiff) {
-                    // display post-surgery data
-                    //
-                    Intent glIntent = new Intent(context, RSIViewerActivity.class);
-                    glIntent.putExtra("dataPoolArray", dataArrayAfter);
-                    glIntent.putExtra("method", 1);
-                    startActivity(glIntent);
-                } else if (hasPreSurgeryData && !acquirePostSurgeryData) {
-                    // acquire data
-                    //
-                    Intent mainIntent = new Intent(context, MainActivity.class);
-                    acquirePostSurgeryData = true;
-                    startActivity(mainIntent);
-                } else if (hasPreSurgeryData && acquirePostSurgeryData) {
-                    // record vectors after surgery
-                    //
-                    dataArrayAfter = dataPoolArray;
-                    Toast.makeText(getApplicationContext(), "Data saved.",
-                            Toast.LENGTH_LONG).show();
-                    buttonCompare.setEnabled(true);
-                    hasPostSurgeryData = true;
-                }
+                dataArrayBefore = new int[dataPoolArray.length];
+//                if (hasDisplayedDiff) {
+//                    // display post-surgery data
+//                    //
+//                    Intent glIntent = new Intent(context, RSIViewerActivity.class);
+//                    glIntent.putExtra("dataPoolArray", dataArrayAfter);
+//                    glIntent.putExtra("method", 1);
+//                    startActivity(glIntent);
+//                } else if (hasPreSurgeryData && !acquirePostSurgeryData) {
+//                    // acquire data
+//                    //
+//                    Intent mainIntent = new Intent(context, MainActivity.class);
+//                    acquirePostSurgeryData = true;
+//                    startActivity(mainIntent);
+//                } else if (hasPreSurgeryData && acquirePostSurgeryData) {
+//                    // record vectors after surgery
+//                    //
+//                    dataArrayAfter = dataPoolArray;
+//                    Toast.makeText(getApplicationContext(), "Data saved.",
+//                            Toast.LENGTH_LONG).show();
+//                    buttonCompare.setEnabled(true);
+//                    hasPostSurgeryData = true;
+//                }
 
             }
         });
@@ -343,11 +325,11 @@ public class RSIViewerActivity extends ActionBarActivity {
     protected void setButtonStyles(Button buttonAfter,
                                    Button buttonBefore,
                                    Button buttonCompare) {
-        if (!hasPreSurgeryData) {
-            buttonAfter.setEnabled(false);
-        } else {
-            buttonAfter.setEnabled(true);
-        }
+//        if (!hasPreSurgeryData) {
+//            buttonAfter.setEnabled(false);
+//        } else {
+//            buttonAfter.setEnabled(true);
+//        }
 
         if (hasPreSurgeryData && hasPostSurgeryData) {
             buttonCompare.setEnabled(true);
@@ -370,12 +352,11 @@ public class RSIViewerActivity extends ActionBarActivity {
      */
     protected int[] getVectorDifference(int[] before, int[] after) {
 
-        int[] result;
-        result = new int[] {1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1,
-                1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0};
-        int length = before.length;
-        for (int i = 0; i < length; i++) {
-            result[i] = result[i] + Math.abs(after[i] - before[i]);
+        int len = before.length;
+        int[] result = new int[len];
+        for (int i = 0; i < len; i++)
+        {
+            result[i] = after[i] - before[i];
         }
         return result;
     }

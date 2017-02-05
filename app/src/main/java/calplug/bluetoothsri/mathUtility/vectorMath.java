@@ -98,7 +98,7 @@ public class vectorMath {
         if (Float.isNaN(theta)){
             theta = 90.0f; // vector is perpendicular
         }
-        System.out.println(theta);
+        // System.out.println(theta);
         return Math.abs(theta);
     }
 

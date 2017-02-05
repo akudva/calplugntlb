@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Handler;
 
 import calplug.bluetoothsri.bluetoothUtility.ConnectionHandler;
 import calplug.bluetoothsri.bluetoothUtility.BluetoothConnectionListener;
@@ -57,51 +58,19 @@ public class RSIViewerActivity extends ActionBarActivity {
     private final int row = 30;
     private final double dataRange = 90;
     private final int step = 10;
+    private List<ChartData> samplePoints = new ArrayList();
+    private int max_theta = 0;
+    private int[] thetaList;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        // config the activity interface
-        //
-        getWindow().setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        setContentView(R.layout.activity_gl_viewer);
-        context = getApplicationContext();
-
-        // initialize graph variables
-        //
+    protected void createHeatMap() {
+        Log.d("DACODA", "Creating heatmap");
         HeatMapHelper heatMap = (HeatMapHelper) findViewById(R.id.heat_map);
-        JSONArray limits = new JSONArray();
-
-        // Initialize buttons
-        //
-        final Button buttonBefore = (Button) findViewById(R.id.button_before);
-        final Button buttonAfter = (Button) findViewById(R.id.button_after);
-        final Button buttonCompare = (Button) findViewById(R.id.button_compare);
-        final Button buttonClear = (Button) findViewById(R.id.button_clear);
-
-        setButtonStyles(buttonAfter, buttonBefore, buttonCompare);
-        setButtonClickEvents(buttonAfter, buttonBefore, buttonCompare, buttonClear);
-
-        // initialize sample matrix
-        //
         heatMap.setVerbose(false);
-        List<ChartData> samplePoints = new ArrayList();
-        // Keep track of the highest theta so that we can pass it to limitsHelper later
-        int max_theta = 0;
-        int[] thetaList;
+        samplePoints = new ArrayList();
 
-        dataPoolArray = new int[24];
-
-        if (false) {
-            // Get data pool from main activity
-            getDataPool();
-            // System.out.println(Arrays.toString(dataPoolArray));
-
+        if (dataPoolArray != null) {
             thetaList = vectorMath.getThetaList(dataPoolArray);
-            System.out.println(Arrays.toString(thetaList)); // print theta list for debug
+            // System.out.println(Arrays.toString(thetaList)); // print theta list for debug
 
 //        int[][] magnetometer_locations = new int[][]
 //                      { { 1,  1},
@@ -124,12 +93,12 @@ public class RSIViewerActivity extends ActionBarActivity {
                 // Some of the magnetometers are reading very high values all the time
                 // e.g. 2035,1151,2043. If we get these, ignore that magnetometer...
                 if (dataPoolArray[i * 3] > 1900) {
-                    String log_string = String.format("Magnetometer reading %d, %d, %d (mag. #%d) looks suspect... Skipping...",
-                            dataPoolArray[i * 3],
-                            dataPoolArray[i * 3 + 1],
-                            dataPoolArray[i * 3 + 2],
-                            i + 1);
-                    Log.d("RSIVIEWER", log_string);
+                    // String log_string = String.format("Magnetometer reading %d, %d, %d (mag. #%d) looks suspect... Skipping...",
+                    //        dataPoolArray[i * 3],
+                    //        dataPoolArray[i * 3 + 1],
+                    //        dataPoolArray[i * 3 + 2],
+                    //        i + 1);
+                    // Log.d("RSIVIEWER", log_string);
                     continue;
                 }
 
@@ -139,22 +108,62 @@ public class RSIViewerActivity extends ActionBarActivity {
                 String row = String.format("R%d", magnetometer_locations[i][1]);
                 String col = String.format("C%d", magnetometer_locations[i][0]);
                 samplePoints.add(new ChartData(row, col, thetaList[i]));
-                String log_info = String.format("Adding %d to position %s %s!", thetaList[i], row, col);
-                Log.d("RSIVIEWER", log_info);
+                // String log_info = String.format("Adding %d to position %s %s!", thetaList[i], row, col);
+                // Log.d("RSIVIEWER", log_info);
             }
-        } else {
-            samplePoints.add(new ChartData("R10", "C10", 0 ));
+        }
+        else{
+            samplePoints.add(new ChartData("R10", "C10", 0));
             max_theta = 90;
         }
-         HeatMapDataConstructor mDataConstructor =
+
+        HeatMapDataConstructor mDataConstructor =
                 new HeatMapDataConstructor(row,
                         column,
                         samplePoints);
 
-         heatMap.setLimitsHelper(step, max_theta);
-         heatMap.setColsRowsHelper(row, column);
-         heatMap.setDataHelper(mDataConstructor);
+        heatMap.setLimitsHelper(step, max_theta);
+        heatMap.setColsRowsHelper(row, column);
+        heatMap.setDataHelper(mDataConstructor);
 
+        String acquire = "2";
+        try {
+            ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // config the activity interface
+        //
+        getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        setContentView(R.layout.activity_gl_viewer);
+        context = getApplicationContext();
+
+        // initialize graph variables
+        //
+        JSONArray limits = new JSONArray();
+
+        // Initialize buttons
+        //
+        final Button buttonBefore = (Button) findViewById(R.id.button_before);
+        final Button buttonAfter = (Button) findViewById(R.id.button_after);
+        final Button buttonCompare = (Button) findViewById(R.id.button_compare);
+        final Button buttonClear = (Button) findViewById(R.id.button_clear);
+
+        setButtonStyles(buttonAfter, buttonBefore, buttonCompare);
+        setButtonClickEvents(buttonAfter, buttonBefore, buttonCompare, buttonClear);
+
+        // initialize sample matrix
+        //
+
+        createHeatMap();
 
         ConnectionHandler.getInstance().addBluetoothConnectionListener
                 (new BluetoothConnectionListener() {
@@ -164,6 +173,7 @@ public class RSIViewerActivity extends ActionBarActivity {
                              @Override
                              public void run() {
                                  // Log.d("DACODA", "Got something new on Bluetooth!");
+                                 if (dataPoolArray == null) { dataPoolArray = new int[24]; }
 
                                  // TODO: Figure out why we have to convert this to a ByteArrayInputStream
                                  InputStream is = new ByteArrayInputStream(data);
@@ -176,8 +186,8 @@ public class RSIViewerActivity extends ActionBarActivity {
                                              for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
                                              {
                                                  dataPoolArray[i] = (int) rcvd_msg.mag_data[i];
-                                                 Log.d("DACODA", Arrays.toString(dataPoolArray));
-                                                 Log.d("DACODA", String.format("%d", (int) rcvd_msg.mag_data[i]));
+                                                 // Log.d("DACODA", Arrays.toString(dataPoolArray));
+                                                 // Log.d("DACODA", String.format("%d", (int) rcvd_msg.mag_data[i]));
                                                  if ( (i+1) % 3 == 0)
                                                  {
                                                      Log.d("DACODA", ";");
@@ -190,7 +200,14 @@ public class RSIViewerActivity extends ActionBarActivity {
                                              // Log.d("DACODA", rcvd_msg.toString());
                                          }
                                      }
-                                     System.out.println("End tlog");
+                                     // System.out.println("End tlog");
+                                     createHeatMap();
+                                     String acquire = "2";
+                                     try {
+                                         ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
+                                     } catch (IOException e) {
+                                         e.printStackTrace();
+                                     }
                                  } catch (IOException e) {
                                      e.printStackTrace();
                                  }
@@ -201,12 +218,6 @@ public class RSIViewerActivity extends ActionBarActivity {
                  }
                 );
 
-        String acquire = "2";
-        try {
-            ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     /**

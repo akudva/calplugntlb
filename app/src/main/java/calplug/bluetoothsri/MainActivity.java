@@ -4,10 +4,12 @@ import android.bluetooth.BluetoothAdapter;
 import calplug.bluetoothsri.bluetoothUtility.ConnectionHandler;
 import calplug.bluetoothsri.Utility.AlternateFunctionListener;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -24,6 +26,7 @@ import java.util.Stack;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 
+import android.app.AlertDialog;
 
 import calplug.bluetoothsri.bluetoothUtility.BluetoothConnectionListener;
 import calplug.bluetoothsri.bluetoothUtility.ConnectionStateChangedListener;
@@ -42,15 +45,18 @@ public class MainActivity extends ActionBarActivity {
 
     private static Parser mavParser = new Parser();
 
-
     private Context context = null;
     private EditText terminalRx = null;
+
+    protected AlertDialog.Builder connectPairDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         context = getApplicationContext();
+
+        setupConnectPairDialog();
 
         // Initialize buttons
         //
@@ -71,6 +77,41 @@ public class MainActivity extends ActionBarActivity {
         // set Bluetooth ConnectionHandler
         //
         setBluetoothConnectionHandler(pairButton, connectButton);
+    }
+
+    protected void setupConnectPairDialog()
+    {
+        CharSequence options[] = new CharSequence[] {"Connect", "Pair"};
+
+        this.connectPairDialog = new AlertDialog.Builder(MainActivity.this);
+        this.connectPairDialog.setTitle("Connect or pair:");
+
+        // Listener for dialog click
+        DialogInterface.OnClickListener CPDonClickListener =
+                new DialogInterface.OnClickListener()
+                {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which)
+                    {
+                        switch (which)
+                        {
+                            case 0:
+                                // Launch connect activity
+                                Log.d("DACODA", "Launching connect activity!");
+                                Intent connectIntent = new Intent(MainActivity.this, ConnectActivity.class);
+                                startActivity(connectIntent);
+                                break;
+                            case 1:
+                                // Launch pair activity
+                                Log.d("DACODA", "Launching pair activity!");
+                                Intent pairIntent = new Intent(MainActivity.this, PairActivity.class);
+                                startActivity(pairIntent);
+                                break;
+                        }
+                    }
+                };
+
+        connectPairDialog.setItems(options, CPDonClickListener);
     }
 
     /**
@@ -96,33 +137,33 @@ public class MainActivity extends ActionBarActivity {
 //                                     terminalRx.append(terminal_string);
 //                                 }
 
-                                 // TODO: Figure out why we have to convert this to a ByteArrayInputStream
-                                 InputStream is = new ByteArrayInputStream(data);
-                                 try {
-                                     while(is.available() > 0) {
-                                         MAVLinkPacket packet = mavParser.mavlink_parse_char(is.read());
-                                         if(packet != null){
-                                             // terminalRx.append(String.format("msgid: %d", packet.msgid));
-                                             msg_tile_measurements_eight rcvd_msg = new msg_tile_measurements_eight(packet);
-                                             for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
-                                             {
-                                                 terminalRx.append(String.format("%d", (int) rcvd_msg.mag_data[i]));
-                                                 if ( (i+1) % 3 == 0)
-                                                 {
-                                                     terminalRx.append(";");
-                                                 } else
-                                                 {
-                                                     terminalRx.append(",");
-                                                 }
-                                             }
-                                             // terminalRx.append("");
-                                             // terminalRx.append(rcvd_msg.toString());
-                                         }
-                                     }
-                                     System.out.println("End tlog");
-                                 } catch (IOException e) {
-                                     e.printStackTrace();
-                                 }
+//                                 // TODO: Figure out why we have to convert this to a ByteArrayInputStream
+//                                 InputStream is = new ByteArrayInputStream(data);
+//                                 try {
+//                                     while(is.available() > 0) {
+//                                         MAVLinkPacket packet = mavParser.mavlink_parse_char(is.read());
+//                                         if(packet != null){
+//                                             // terminalRx.append(String.format("msgid: %d", packet.msgid));
+//                                             msg_tile_measurements_eight rcvd_msg = new msg_tile_measurements_eight(packet);
+//                                             for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
+//                                             {
+//                                                 terminalRx.append(String.format("%d", (int) rcvd_msg.mag_data[i]));
+//                                                 if ( (i+1) % 3 == 0)
+//                                                 {
+//                                                     terminalRx.append(";");
+//                                                 } else
+//                                                 {
+//                                                     terminalRx.append(",");
+//                                                 }
+//                                             }
+//                                             // terminalRx.append("");
+//                                             // terminalRx.append(rcvd_msg.toString());
+//                                         }
+//                                     }
+//                                     System.out.println("End tlog");
+//                                 } catch (IOException e) {
+//                                     e.printStackTrace();
+//                                 }
 
 
                              }
@@ -205,8 +246,9 @@ public class MainActivity extends ActionBarActivity {
             public void OnClickPrimary() {
                 // show connect activity
                 //
-                Intent connectIntent = new Intent(MainActivity.this, ConnectActivity.class);
-                startActivity(connectIntent);
+                connectPairDialog.show();
+//                Intent connectIntent = new Intent(MainActivity.this, ConnectActivity.class);
+//                startActivity(connectIntent);
             }
         });
 
@@ -256,45 +298,47 @@ public class MainActivity extends ActionBarActivity {
      */
     private int[] textDataParsing(){
 
-        // terminate parsing if input is empty
-        //
-        if (terminalRx.getText().toString().length() == 0) {
-            Toast.makeText(context, noEnoughData, toastShort).show();
-            return new int[] {-1};
-        }
-        // parse mat by flag ::
-        //
-        String[] lines = parseLine(terminalRx.getText().toString(), "::");
-        String[] segmentsInLine;
-        String[] digitsInSegment;
-        Stack<Integer> dataPool = new Stack<>();
+//        // terminate parsing if input is empty
+//        //
+//        if (terminalRx.getText().toString().length() == 0) {
+//            Toast.makeText(context, noEnoughData, toastShort).show();
+//            return new int[] {-1};
+//        }
+//        // parse mat by flag ::
+//        //
+//        String[] lines = parseLine(terminalRx.getText().toString(), "::");
+//        String[] segmentsInLine;
+//        String[] digitsInSegment;
+//        Stack<Integer> dataPool = new Stack<>();
+//
+//        try {
+//            for (String line: lines) {
+//                // parse tile by flag ;
+//                segmentsInLine = parseLine(line, ";");
+//                for (String segment: segmentsInLine){
+//                    // parse sensor by ,
+//                    digitsInSegment = parseLine(segment, ",");
+//                    for (String digit: digitsInSegment){
+//                        dataPool.push(Integer.parseInt(digit));
+//                    }
+//                }
+//            }
+//        } catch (Exception e) {
+//            Toast.makeText(context, wrongDataFormat, toastShort).show();
+//            return new int[] {-1};
+//        }
+//
+//
+//        int[] dataPoolArray = new int[dataPool.toArray().length];
+//        Integer length = dataPool.toArray().length - 1;
+//        Integer esi = 0;
+//        while (!dataPool.empty()) {
+//            dataPoolArray[length - esi]=dataPool.pop();
+//            esi++;
+//        }
+//        return dataPoolArray;
 
-        try {
-            for (String line: lines) {
-                // parse tile by flag ;
-                segmentsInLine = parseLine(line, ";");
-                for (String segment: segmentsInLine){
-                    // parse sensor by ,
-                    digitsInSegment = parseLine(segment, ",");
-                    for (String digit: digitsInSegment){
-                        dataPool.push(Integer.parseInt(digit));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Toast.makeText(context, wrongDataFormat, toastShort).show();
-            return new int[] {-1};
-        }
-
-
-        int[] dataPoolArray = new int[dataPool.toArray().length];
-        Integer length = dataPool.toArray().length - 1;
-        Integer esi = 0;
-        while (!dataPool.empty()) {
-            dataPoolArray[length - esi]=dataPool.pop();
-            esi++;
-        }
-        return dataPoolArray;
+        return new int[] {1};
     }
 
     /**

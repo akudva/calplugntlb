@@ -2,7 +2,6 @@ package calplug.bluetoothsri;
 
 import android.content.Context;
 import android.content.Intent;
-import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -17,22 +16,16 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Handler;
 
 import calplug.bluetoothsri.bluetoothUtility.ConnectionHandler;
 import calplug.bluetoothsri.bluetoothUtility.BluetoothConnectionListener;
 import calplug.bluetoothsri.com.MAVLink.MAVLinkPacket;
 import calplug.bluetoothsri.com.MAVLink.Parser;
-import calplug.bluetoothsri.com.MAVLink.common.msg_tile_measurements_eight;
+import calplug.bluetoothsri.com.MAVLink.common.*;
 import calplug.bluetoothsri.heatMapUtility.ChartData;
-import calplug.bluetoothsri.heatMapUtility.HeatMap;
 import calplug.bluetoothsri.heatMapUtility.HeatMapDataConstructor;
 import calplug.bluetoothsri.heatMapUtility.HeatMapHelper;
-import calplug.bluetoothsri.mathUtility.vectorMath;
-
-import calplug.bluetoothsri.com.MAVLink.Parser;
 
 /**
  * RSIViewerActivity create SRIViewerCanvas, implements vector calculations
@@ -62,90 +55,22 @@ public class RSIViewerActivity extends ActionBarActivity {
     private int max_theta = 0;
     private int[] thetaList;
 
-    protected void createHeatMap() {
-        Log.d("DACODA", "Creating heatmap");
-        HeatMapHelper heatMap = (HeatMapHelper) findViewById(R.id.heat_map);
-        heatMap.setVerbose(false);
-        samplePoints = new ArrayList();
+    private Mat mat;
 
-        if (dataPoolArray != null) {
-            if (dataArrayBefore != null)
-            {
-                dataPoolArray = getVectorDifference(dataArrayBefore, dataPoolArray);
-            }
-
-            thetaList = vectorMath.getThetaList(dataPoolArray);
-
-            // Locations of magnetometers for a 30x30 grid
-            int[][] magnetometer_locations = new int[][]
-                           {{2, 28},
-                            {28, 28},
-                            {28, 2},
-                            {2, 2},
-                            {8, 22},
-                            {22, 22},
-                            {22, 8},
-                            {8, 8}};
-
-            for (int i = 0; i < magnetometer_locations.length; ++i) {
-                // Some of the magnetometers are reading very high values all the time
-                // e.g. 2035,1151,2043. If we get these, ignore that magnetometer...
-                if (dataPoolArray[i * 3] > 1900) {
-                    // String log_string = String.format("Magnetometer reading %d, %d, %d (mag. #%d) looks suspect... Skipping...",
-                    //        dataPoolArray[i * 3],
-                    //        dataPoolArray[i * 3 + 1],
-                    //        dataPoolArray[i * 3 + 2],
-                    //        i + 1);
-                    // Log.d("RSIVIEWER", log_string);
-                    continue;
-                }
-
-                if (thetaList[i] > max_theta)
-                    max_theta = thetaList[i];
-
-                String row = String.format("R%d", magnetometer_locations[i][1]);
-                String col = String.format("C%d", magnetometer_locations[i][0]);
-                samplePoints.add(new ChartData(row, col, thetaList[i]));
-
-                Log.d("DACODA", "\n\nHeat map information:");
-                for (int j = 0; j < 8; ++j)
-                {
-                    Log.d("DACODA", String.format("Tile %d: %5d, %5d, %5d -> %3d -> %3d, %3d", j, dataPoolArray[3*j], dataPoolArray[3*j+1], dataPoolArray[3*j+2],
-                            thetaList[j], magnetometer_locations[j][0],
-                            magnetometer_locations[j][1]));
-                }
-                // String log_info = String.format("Adding %d to position %s %s!", thetaList[i], row, col);
-                // Log.d("RSIVIEWER", log_info);
-            }
-        }
-        else{
-            samplePoints.add(new ChartData("R10", "C10", 0));
-            max_theta = 90;
-        }
-
-        HeatMapDataConstructor mDataConstructor =
-                new HeatMapDataConstructor(row,
-                        column,
-                        samplePoints);
-
-        heatMap.setLimitsHelper(step, max_theta);
-        heatMap.setColsRowsHelper(row, column);
-        heatMap.setDataHelper(mDataConstructor);
-
-        String acquire = "2";
-        try {
-            ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public enum Mode {
+        EIGHT_MAGS,
+        EIGHT_MAGS_WITH_ACC,
+        NINE_MAGS,
+        NINE_MAGS_WITH_ACC
     }
+
+    public Mode mode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // config the activity interface
-        //
+        // Activity configuration: set as fullscreen and GL
         getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -153,11 +78,9 @@ public class RSIViewerActivity extends ActionBarActivity {
         context = getApplicationContext();
 
         // initialize graph variables
-        //
         JSONArray limits = new JSONArray();
 
         // Initialize buttons
-        //
         final Button buttonBefore = (Button) findViewById(R.id.button_before);
         final Button buttonAfter = (Button) findViewById(R.id.button_after);
         final Button buttonCompare = (Button) findViewById(R.id.button_compare);
@@ -166,11 +89,11 @@ public class RSIViewerActivity extends ActionBarActivity {
         setButtonStyles(buttonAfter, buttonBefore, buttonCompare);
         setButtonClickEvents(buttonAfter, buttonBefore, buttonCompare, buttonClear);
 
-        // initialize sample matrix
-        //
+        mat = new Mat();
 
         createHeatMap();
 
+        // See if we got any MAVLink messages whenever bytes in Bluetooth buffer
         ConnectionHandler.getInstance().addBluetoothConnectionListener
                 (new BluetoothConnectionListener() {
                      @Override
@@ -178,40 +101,7 @@ public class RSIViewerActivity extends ActionBarActivity {
                          runOnUiThread(new Runnable() {
                              @Override
                              public void run() {
-                                 // Log.d("DACODA", "Got something new on Bluetooth!");
-                                 if (dataPoolArray == null) { dataPoolArray = new int[24]; }
-
-                                 // TODO: Figure out why we have to convert this to a ByteArrayInputStream
-                                 InputStream is = new ByteArrayInputStream(data);
-                                 try {
-                                     while(is.available() > 0) {
-                                         MAVLinkPacket packet = mavParser.mavlink_parse_char(is.read());
-                                         if(packet != null){
-                                             // terminalRx.append(String.format("msgid: %d", packet.msgid));
-                                             msg_tile_measurements_eight rcvd_msg = new msg_tile_measurements_eight(packet);
-                                             for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
-                                             {
-                                                 dataPoolArray[i] = (int) rcvd_msg.mag_data[i];
-                                                 // Log.d("DACODA", String.format("%d", (int) rcvd_msg.mag_data[i]));
-                                             }
-
-
-                                             createHeatMap();
-                                             String acquire = "2";
-                                             try {
-                                                 ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
-                                             } catch (IOException e) {
-                                                 e.printStackTrace();
-                                             }
-                                             // Log.d("DACODA", "");
-                                             // Log.d("DACODA", rcvd_msg.toString());
-                                         }
-                                     }
-                                     // System.out.println("End tlog");
-                                 } catch (IOException e) {
-                                     e.printStackTrace();
-                                 }
-
+                                 handleBluetooth(data);
                              }
                          });
                      }
@@ -220,15 +110,106 @@ public class RSIViewerActivity extends ActionBarActivity {
 
     }
 
-    /**
-     * getDataPool retrieves data pool from main activity
-     */
-    protected void getDataPool() {
+    protected void createHeatMap()
+    {
+        Log.d("DACODA", "Creating heatmap");
+        HeatMapHelper heatMap = (HeatMapHelper) findViewById(R.id.heat_map);
+        heatMap.setVerbose(false);
 
-        Bundle bundle = getIntent().getExtras();
-        dataPoolArray = bundle.getIntArray("dataPoolArray");
-        method = bundle.getInt("method");
-        //System.out.println(Arrays.toString(dataPoolArray));
+        // Reset sample points
+        samplePoints = new ArrayList();
+        ArrayList<int[]> magnetometerData = mat.getMagnetometerData();
+
+        // TODO: keep track of max theta value
+
+        // TODO: Check to make sure the data is actually 3 members long
+        for (int[] data : magnetometerData)
+        {
+            String rowString = String.format("R%d", data[0]);
+            String colString = String.format("C%d", data[1]);
+            samplePoints.add(new ChartData(rowString, colString, data[2]));
+        }
+
+        HeatMapDataConstructor mDataConstructor = new HeatMapDataConstructor(row, column, samplePoints);
+
+        heatMap.setLimitsHelper(step, 90);
+        heatMap.setColsRowsHelper(row, column);
+        heatMap.setDataHelper(mDataConstructor);
+
+        // Send a "2" to the Hub
+        String acquire = "2";
+        try { ConnectionHandler.getInstance().sendBytes(acquire.getBytes()); }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    protected void handleBluetooth(final byte data[])
+    {
+        InputStream is = new ByteArrayInputStream(data);
+
+        // Try and parse a MAVLink message out
+        try
+        {
+            while ( is.available() > 0 )
+            {
+                MAVLinkPacket packet = mavParser.mavlink_parse_char(is.read());
+
+                // If we got a MAVLink message...
+                if ( packet != null )
+                {
+                    handleMAVLink(packet);
+                }
+            }
+        }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    protected void handleMAVLink(MAVLinkPacket packet)
+    {
+        // TODO: We should be checking if the message lines up with our current mode
+        switch (packet.msgid)
+        {
+            case msg_ping.MAVLINK_MSG_ID_PING:
+                return;
+
+            case msg_measurement_mode_request.MAVLINK_MSG_ID_MEASUREMENT_MODE_REQUEST:
+                return;
+
+            // For any measurement message
+            case msg_tile_measurements_eight.MAVLINK_MSG_ID_TILE_MEASUREMENTS_EIGHT:
+            {
+                msg_tile_measurements_eight message = new msg_tile_measurements_eight(packet);
+                this.mat.updateTile(message.tile_number, message.mag_data);
+                createHeatMap();
+                break;
+            }
+            case msg_tile_measurements_eight_w_acc.MAVLINK_MSG_ID_TILE_MEASUREMENTS_EIGHT_W_ACC:
+            {
+                msg_tile_measurements_eight message = new msg_tile_measurements_eight(packet);
+                this.mat.updateTile(message.tile_number, message.mag_data);
+                createHeatMap();
+                break;
+            }
+            case msg_tile_measurements_nine.MAVLINK_MSG_ID_TILE_MEASUREMENTS_NINE:
+            {
+                msg_tile_measurements_eight message = new msg_tile_measurements_eight(packet);
+                this.mat.updateTile(message.tile_number, message.mag_data);
+                createHeatMap();
+                break;
+            }
+            case msg_tile_measurements_nine_w_acc.MAVLINK_MSG_ID_TILE_MEASUREMENTS_NINE_W_ACC:
+            {
+                msg_tile_measurements_eight message = new msg_tile_measurements_eight(packet);
+                this.mat.updateTile(message.tile_number, message.mag_data);
+                createHeatMap();
+                break;
+            }
+
+            case msg_radio_status.MAVLINK_MSG_ID_RADIO_STATUS:
+                return;
+
+            default:
+                return;
+        }
     }
 
     /**
@@ -247,36 +228,14 @@ public class RSIViewerActivity extends ActionBarActivity {
                 // Have to do clone to make sure that dataArrayBefore doesn't just use the same reference
                 dataArrayBefore = dataPoolArray.clone();
                 Toast.makeText(getApplicationContext(), "Saved baseline...",
-                            Toast.LENGTH_LONG).show();
+                        Toast.LENGTH_LONG).show();
             }
         });
 
         buttonAfter.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
+                // Reset the before data
                 dataArrayBefore = new int[dataPoolArray.length];
-//                if (hasDisplayedDiff) {
-//                    // display post-surgery data
-//                    //
-//                    Intent glIntent = new Intent(context, RSIViewerActivity.class);
-//                    glIntent.putExtra("dataPoolArray", dataArrayAfter);
-//                    glIntent.putExtra("method", 1);
-//                    startActivity(glIntent);
-//                } else if (hasPreSurgeryData && !acquirePostSurgeryData) {
-//                    // acquire data
-//                    //
-//                    Intent mainIntent = new Intent(context, MainActivity.class);
-//                    acquirePostSurgeryData = true;
-//                    startActivity(mainIntent);
-//                } else if (hasPreSurgeryData && acquirePostSurgeryData) {
-//                    // record vectors after surgery
-//                    //
-//                    dataArrayAfter = dataPoolArray;
-//                    Toast.makeText(getApplicationContext(), "Data saved.",
-//                            Toast.LENGTH_LONG).show();
-//                    buttonCompare.setEnabled(true);
-//                    hasPostSurgeryData = true;
-//                }
-
             }
         });
 
@@ -286,11 +245,11 @@ public class RSIViewerActivity extends ActionBarActivity {
                     // display difference between pre-surgery vectors and
                     // post-surgery vectors
                     //
-                    dataPoolArray = getVectorDifference(dataArrayBefore, dataArrayAfter);
-                    Intent glIntent = new Intent(context, RSIViewerActivity.class);
-                    glIntent.putExtra("dataPoolArray", dataPoolArray);
-                    glIntent.putExtra("method", 1);
-                    startActivity(glIntent);
+//                    dataPoolArray = getVectorDifference(dataArrayBefore, dataArrayAfter);
+//                    Intent glIntent = new Intent(context, RSIViewerActivity.class);
+//                    glIntent.putExtra("dataPoolArray", dataPoolArray);
+//                    glIntent.putExtra("method", 1);
+//                    startActivity(glIntent);
 
                     hasDisplayedDiff = true;
                 } else {
@@ -325,11 +284,6 @@ public class RSIViewerActivity extends ActionBarActivity {
     protected void setButtonStyles(Button buttonAfter,
                                    Button buttonBefore,
                                    Button buttonCompare) {
-//        if (!hasPreSurgeryData) {
-//            buttonAfter.setEnabled(false);
-//        } else {
-//            buttonAfter.setEnabled(true);
-//        }
 
         if (hasPreSurgeryData && hasPostSurgeryData) {
             buttonCompare.setEnabled(true);

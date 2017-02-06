@@ -15,16 +15,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import calplug.bluetoothsri.com.MAVLink.MAVLinkPacket;
-import calplug.bluetoothsri.com.MAVLink.Messages.MAVLinkMessage;
-import calplug.bluetoothsri.com.MAVLink.common.msg_tile_measurements_eight;
-import calplug.bluetoothsri.com.MAVLink.common.*;
 import calplug.bluetoothsri.com.MAVLink.Parser;
 
 import java.io.IOException;
-import java.util.Stack;
-import java.io.InputStream;
-import java.io.ByteArrayInputStream;
 
 import android.app.AlertDialog;
 
@@ -205,6 +198,7 @@ public class MainActivity extends ActionBarActivity {
                     //
                     return;
                 }
+                // Intent glIntent = new Intent(context, RSIViewerActivity.class);
                 Intent glIntent = new Intent(context, RSIViewerActivity.class);
                 glIntent.putExtra("dataPoolArray", dataPoolArray);
                 glIntent.putExtra("method", 0);
@@ -223,6 +217,7 @@ public class MainActivity extends ActionBarActivity {
                     //
                     return;
                 }
+                // Intent glIntent = new Intent(context, RSIViewerActivity.class);
                 Intent glIntent = new Intent(context, RSIViewerActivity.class);
                 glIntent.putExtra("dataPoolArray", dataPoolArray);
                 glIntent.putExtra("method", 1);

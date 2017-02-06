@@ -56,6 +56,8 @@ public class HeatMap extends View {
 
         block_height = width /columns.size();
         block_width = (width - getRowTextWidth())/ rows.size() - 5;
+
+        setKeepScreenOn(true);
     }
 
     @Override

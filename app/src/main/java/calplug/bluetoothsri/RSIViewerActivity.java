@@ -89,7 +89,9 @@ public class RSIViewerActivity extends ActionBarActivity {
         setButtonStyles(buttonAfter, buttonBefore, buttonCompare);
         setButtonClickEvents(buttonAfter, buttonBefore, buttonCompare, buttonClear);
 
-        mat = new Mat();
+        // Initialize mat with one tile at "origin" with eight mag.'s and no accelerometer
+        int[][] tileLocations = {{0, 0}};
+        mat = new Mat(1, tileLocations, ConfigurationDetails.tileModes.EIGHT_MAGNETOMETERS_SANS_ACCELEROMETER);
 
         createHeatMap();
 
@@ -122,21 +124,35 @@ public class RSIViewerActivity extends ActionBarActivity {
 
         // TODO: keep track of max theta value
 
+
         // TODO: Check to make sure the data is actually 3 members long
+        // Plot data in heatmap to scale
+        float xScale = row / (float) mat.xDimension;
+        float yScale = column / (float) mat.yDimension;
+
+        Log.d("DACODA", String.format("Scale is %.3f x %.3f", xScale, yScale));
+
         for (int[] data : magnetometerData)
         {
-            String rowString = String.format("R%d", data[0]);
-            String colString = String.format("C%d", data[1]);
+            String rowString = String.format("R%d", (int) (data[0] * xScale) );
+            String colString = String.format("C%d", (int) (data[1] * yScale) );
             samplePoints.add(new ChartData(rowString, colString, data[2]));
+
+            Log.d("DACODA", String.format("Adding value %2d to row (%3d x %.3f = ) %2d and column (%3d x %.3f = ) %2d", data[2],
+                    data[0], xScale, (int) (data[0] * xScale),
+                    data[1], yScale, (int) (data[1] * yScale)));
         }
 
         HeatMapDataConstructor mDataConstructor = new HeatMapDataConstructor(row, column, samplePoints);
 
+        // For now just assume 90 is the highest theta value
         heatMap.setLimitsHelper(step, 90);
         heatMap.setColsRowsHelper(row, column);
         heatMap.setDataHelper(mDataConstructor);
 
-        // Send a "2" to the Hub
+        // TODO: If a UI button is triggered, don't send a message
+
+        // Request another message from the hub
         String acquire = "2";
         try { ConnectionHandler.getInstance().sendBytes(acquire.getBytes()); }
         catch (IOException e) { e.printStackTrace(); }

@@ -4,15 +4,37 @@ public class Tile
 {
     public Magnetometer[] magnetometers;
 
-    // The default mode should be eight mag.'s with no accelerometer
-    public Tile()
-    {
-        initMagnetometers(8);
-    }
+    public static int xDimension = 150;
+    public static int yDimension = 150;
 
-    public Tile(int numMagnetometers)
+    // Initialize Tile based on what configuration it should be in
+    public Tile( ConfigurationDetails.tileModes tileMode )
     {
-        initMagnetometers(numMagnetometers);
+        int numberMagnetometers = 8;
+        boolean hasAccelerometer = false;
+
+        switch (tileMode)
+        {
+            case EIGHT_MAGNETOMETERS_SANS_ACCELEROMETER:
+                numberMagnetometers = 8;
+                hasAccelerometer = false;
+                break;
+            case EIGHT_MAGNETOMETERS_WITH_ACCELEROMETER:
+                numberMagnetometers = 8;
+                hasAccelerometer = true;
+                break;
+            case NINE_MAGNETOMETERS_SANS_ACCELEROMETER:
+                numberMagnetometers = 9;
+                hasAccelerometer = false;
+                break;
+            case NINE_MAGNETOMETERS_WITH_ACCELEROMETER:
+                numberMagnetometers = 9;
+                hasAccelerometer = true;
+                break;
+        }
+
+        initMagnetometers(numberMagnetometers);
+        // initAccelerometer(hasAccelerometer);
     }
 
     public void updateMagnetometers(float[] magnetometerData)
@@ -30,34 +52,22 @@ public class Tile
     {
         this.magnetometers = new Magnetometer[numMagnetometers];
 
-//        // The following are given in millimeters
-//        int[][] magnetometer_locations = new int[][]
-//                { {10, 140},
-//                  {140, 140},
-//                  {140, 10},
-//                  {10, 10},
-//                  {40, 110},
-//                  {110, 110},
-//                  {110, 40},
-//                  {40, 40},
-//                  {75, 75} };
-
         // The following are given in millimeters
-        int[][] magnetometer_locations = new int[][]
-                {{2, 28},
-                        {28, 28},
-                        {28, 2},
-                        {2, 2},
-                        {8, 22},
-                        {22, 22},
-                        {22, 8},
-                        {8, 8}};
+        int[][] magnetometerLocations= new int[][]
+                { {10, 140},
+                  {140, 140},
+                  {140, 10},
+                  {10, 10},
+                  {40, 110},
+                  {110, 110},
+                  {110, 40},
+                  {40, 40},
+                  {75, 75} };
 
         // Set locations for all magnetometers in tile
         for (int i = 0; i < numMagnetometers; ++i)
         {
-            magnetometers[i] = new Magnetometer();
-            magnetometers[i].location = magnetometer_locations[i];
+            magnetometers[i] = new Magnetometer(magnetometerLocations[i]);
         }
     }
 }

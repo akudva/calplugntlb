@@ -2,21 +2,49 @@ package calplug.bluetoothsri;
 
 import java.util.ArrayList;
 
-import calplug.bluetoothsri.com.MAVLink.MAVLinkPacket;
-import calplug.bluetoothsri.com.MAVLink.Messages.MAVLinkMessage;
-import calplug.bluetoothsri.com.MAVLink.common.*;
-
 public class Mat
 {
+    // TODO: Right now the Tiles and their locations are separate, it would probably be better to
+    // TODO: (cont'd) join them in a single data structure
     public ArrayList<Tile> tiles;
-    public int[][] tile_locations; // This should be of the form { {0, 0}, {0, 1}, {1, 1}, {1, 0} }
-    public int xSpacing;
-    public int ySpacing;
+    public ArrayList<int[]> tileLocations; // This should be of the form { {0, 0}, {0, 1}, {1, 1}, {1, 0} }
+    public int xDimension = 1;
+    public int yDimension = 1;
+    public int xSpacing = 1;
+    public int ySpacing = 1;
 
-    public Mat()
+    public Mat(int numberTiles, int[][] initTileLocations, ConfigurationDetails.tileModes tileMode)
     {
-        tiles = new ArrayList<>();
-        tiles.add(new Tile());
+        int rightmostTileCoordinate = 0;
+        int topmostTileCoordinate = 0;
+
+        tiles = new ArrayList<Tile>();
+        tileLocations = new ArrayList<int[]>();
+
+        // TODO: check that numberTiles and initTileLocations dimensions are correct
+        for (int i = 0; i < numberTiles; ++i)
+        {
+            tiles.add( new Tile(tileMode) );
+            tileLocations.add( initTileLocations[i] );
+
+            int currentTileX = initTileLocations[i][0];
+            int currentTileY = initTileLocations[i][0];
+
+            if (currentTileX > rightmostTileCoordinate)
+                rightmostTileCoordinate = currentTileX;
+
+            if (currentTileY > topmostTileCoordinate)
+                topmostTileCoordinate = currentTileY;
+
+        }
+
+        calculateDimensions(rightmostTileCoordinate, topmostTileCoordinate);
+    }
+
+    void calculateDimensions(int rightmostTileCoordinate, int topmostTileCoordinate)
+    {
+        xDimension = (rightmostTileCoordinate+1) * Tile.xDimension + rightmostTileCoordinate*xSpacing;
+        yDimension = (topmostTileCoordinate+1) * Tile.yDimension + topmostTileCoordinate*ySpacing;
     }
 
     // Returns an ArrayList of { x, y, thetaValue }
@@ -26,14 +54,17 @@ public class Mat
         ArrayList<int[]> magnetometerData = new ArrayList<>();
 
         // TODO: Make sure to take into account the tile positions
-        for (Tile tile : tiles)
+        for (int i = 0; i < tiles.size(); ++i)
         {
-            for (Magnetometer mag : tile.magnetometers)
+            int xOffset = tileLocations.get(i)[0] * (Tile.xDimension + xSpacing);
+            int yOffset = tileLocations.get(i)[1] * (Tile.yDimension + ySpacing);
+
+            for (Magnetometer mag : tiles.get(i).magnetometers)
             {
                 if ( mag.isFucked )
                     continue;
 
-                magnetometerData.add(new int[] {mag.location[0], mag.location[1], mag.vThetaRatio} );
+                magnetometerData.add(new int[] {mag.location[0] + xOffset, mag.location[1] + yOffset, mag.vThetaRatio} );
             }
         }
 
@@ -45,4 +76,5 @@ public class Mat
         // TODO: Verify and make consistent exactly which tile we are handling
         tiles.get(tileNumber - 1).updateMagnetometers(magnetometerData);
     }
+
 }

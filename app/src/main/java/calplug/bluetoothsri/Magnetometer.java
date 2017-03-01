@@ -9,6 +9,8 @@ public class Magnetometer
     public int vThetaRatio;
     public boolean isFucked;
 
+    public Magnetometer(int[] initLocation) { location = initLocation; }
+
     public void updateVThetaRatio()
     {
         vThetaRatio = (int) vectorMath.getVectorThetaRatio(x, y, z);

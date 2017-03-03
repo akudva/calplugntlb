@@ -1,5 +1,7 @@
 package calplug.bluetoothsri;
 
+import android.util.Log;
+
 public class Tile
 {
     public Magnetometer[] magnetometers;
@@ -39,8 +41,10 @@ public class Tile
 
     public void updateMagnetometers(float[] magnetometerData)
     {
+        Log.d("TILE", "Updating magnetometer with following measurements");
         for (int i = 0; i < magnetometerData.length / 3; ++i)
         {
+            Log.d("TILE", String.format("Magnetometer %d: %.3f, %.3f, %.3f", i, magnetometerData[3*i], magnetometerData[3*i+1], magnetometerData[3*i+2]));
             this.magnetometers[i].x = (int) magnetometerData[3*i];
             this.magnetometers[i].y = (int) magnetometerData[3*i + 1];
             this.magnetometers[i].z = (int) magnetometerData[3*i + 2];

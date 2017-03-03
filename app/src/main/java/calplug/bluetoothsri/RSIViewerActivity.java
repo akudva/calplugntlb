@@ -47,8 +47,8 @@ public class RSIViewerActivity extends ActionBarActivity {
     protected static boolean hasDisplayedDiff = false;
     private static final String TAG = "RSIVIEWER";
 
-    private final int column = 30;
-    private final int row = 30;
+    private final int column = 100;
+    private final int row = 100;
     private final double dataRange = 90;
     private final int step = 10;
     private List<ChartData> samplePoints = new ArrayList();
@@ -90,8 +90,8 @@ public class RSIViewerActivity extends ActionBarActivity {
         setButtonClickEvents(buttonAfter, buttonBefore, buttonCompare, buttonClear);
 
         // Initialize mat with one tile at "origin" with eight mag.'s and no accelerometer
-        int[][] tileLocations = {{0, 0}};
-        mat = new Mat(1, tileLocations, ConfigurationDetails.tileModes.EIGHT_MAGNETOMETERS_SANS_ACCELEROMETER);
+        int[][] tileLocations = {{0, 0}, {1, 0}, {0, 1}, {1, 1}};
+        mat = new Mat(4, tileLocations, ConfigurationDetails.tileModes.EIGHT_MAGNETOMETERS_SANS_ACCELEROMETER);
 
         createHeatMap();
 
@@ -114,7 +114,7 @@ public class RSIViewerActivity extends ActionBarActivity {
 
     protected void createHeatMap()
     {
-        Log.d("DACODA", "Creating heatmap");
+        Log.d("HEATMAP", "Creating heatmap");
         HeatMapHelper heatMap = (HeatMapHelper) findViewById(R.id.heat_map);
         heatMap.setVerbose(false);
 
@@ -130,15 +130,14 @@ public class RSIViewerActivity extends ActionBarActivity {
         float xScale = row / (float) mat.xDimension;
         float yScale = column / (float) mat.yDimension;
 
-        Log.d("DACODA", String.format("Scale is %.3f x %.3f", xScale, yScale));
+         Log.d("HEATMAP", String.format("Scale is (%d / %d = ) %.3f x (%d / %d = ) %.3f", row, mat.xDimension, xScale, column, mat.yDimension, yScale));
 
         for (int[] data : magnetometerData)
         {
             String rowString = String.format("R%d", (int) (data[0] * xScale) );
             String colString = String.format("C%d", (int) (data[1] * yScale) );
             samplePoints.add(new ChartData(rowString, colString, data[2]));
-
-            Log.d("DACODA", String.format("Adding value %2d to row (%3d x %.3f = ) %2d and column (%3d x %.3f = ) %2d", data[2],
+            Log.d("HEATMAP", String.format("Adding value %2d to row (%3d x %.3f = ) %2d and column (%3d x %.3f = ) %2d", data[2],
                     data[0], xScale, (int) (data[0] * xScale),
                     data[1], yScale, (int) (data[1] * yScale)));
         }
@@ -195,7 +194,10 @@ public class RSIViewerActivity extends ActionBarActivity {
             {
                 msg_tile_measurements_eight message = new msg_tile_measurements_eight(packet);
                 this.mat.updateTile(message.tile_number, message.mag_data);
-                createHeatMap();
+                if (message.tile_number == 3)
+                {
+                    createHeatMap();
+                }
                 break;
             }
             case msg_tile_measurements_eight_w_acc.MAVLINK_MSG_ID_TILE_MEASUREMENTS_EIGHT_W_ACC:

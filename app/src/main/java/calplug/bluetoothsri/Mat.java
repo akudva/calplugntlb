@@ -1,5 +1,7 @@
 package calplug.bluetoothsri;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 
 public class Mat
@@ -28,7 +30,7 @@ public class Mat
             tileLocations.add( initTileLocations[i] );
 
             int currentTileX = initTileLocations[i][0];
-            int currentTileY = initTileLocations[i][0];
+            int currentTileY = initTileLocations[i][1];
 
             if (currentTileX > rightmostTileCoordinate)
                 rightmostTileCoordinate = currentTileX;
@@ -43,8 +45,10 @@ public class Mat
 
     void calculateDimensions(int rightmostTileCoordinate, int topmostTileCoordinate)
     {
+        Log.d("DACODA", String.format("Calculating dimensions for tile of size %d x %d", rightmostTileCoordinate, topmostTileCoordinate));
         xDimension = (rightmostTileCoordinate+1) * Tile.xDimension + rightmostTileCoordinate*xSpacing;
         yDimension = (topmostTileCoordinate+1) * Tile.yDimension + topmostTileCoordinate*ySpacing;
+        Log.d("DACODA", String.format("The mat is %d x %d millimeters", xDimension, yDimension));
     }
 
     // Returns an ArrayList of { x, y, thetaValue }
@@ -73,8 +77,9 @@ public class Mat
 
     public void updateTile(int tileNumber, float[] magnetometerData)
     {
+        Log.d("MAT", String.format("Updating tile #%d", tileNumber));
         // TODO: Verify and make consistent exactly which tile we are handling
-        tiles.get(tileNumber - 1).updateMagnetometers(magnetometerData);
+        tiles.get(tileNumber).updateMagnetometers(magnetometerData);
     }
 
 }

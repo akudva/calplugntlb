@@ -200,60 +200,7 @@ public class MainActivity extends ActionBarActivity {
      * @return int array, set the first int to -1 if encounter error
      */
     private int[] textDataParsing(){
-
-//        // terminate parsing if input is empty
-//        //
-//        if (terminalRx.getText().toString().length() == 0) {
-//            Toast.makeText(context, noEnoughData, toastShort).show();
-//            return new int[] {-1};
-//        }
-//        // parse mat by flag ::
-//        //
-//        String[] lines = parseLine(terminalRx.getText().toString(), "::");
-//        String[] segmentsInLine;
-//        String[] digitsInSegment;
-//        Stack<Integer> dataPool = new Stack<>();
-//
-//        try {
-//            for (String line: lines) {
-//                // parse tile by flag ;
-//                segmentsInLine = parseLine(line, ";");
-//                for (String segment: segmentsInLine){
-//                    // parse sensor by ,
-//                    digitsInSegment = parseLine(segment, ",");
-//                    for (String digit: digitsInSegment){
-//                        dataPool.push(Integer.parseInt(digit));
-//                    }
-//                }
-//            }
-//        } catch (Exception e) {
-//            Toast.makeText(context, wrongDataFormat, toastShort).show();
-//            return new int[] {-1};
-//        }
-//
-//
-//        int[] dataPoolArray = new int[dataPool.toArray().length];
-//        Integer length = dataPool.toArray().length - 1;
-//        Integer esi = 0;
-//        while (!dataPool.empty()) {
-//            dataPoolArray[length - esi]=dataPool.pop();
-//            esi++;
-//        }
-//        return dataPoolArray;
-
         return new int[] {1};
-    }
-
-    /**
-     * parse string lines
-     * @param string
-     * @param delimiter
-     * @return separated data segments as an array
-     */
-    private String[] parseLine(String string, String delimiter){
-
-        String[] segment = string.split(delimiter);
-        return segment;
     }
 
     @Override

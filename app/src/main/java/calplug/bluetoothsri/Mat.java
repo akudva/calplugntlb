@@ -68,7 +68,8 @@ public class Mat
                 if ( mag.isFucked )
                     continue;
 
-                magnetometerData.add(new int[] {mag.location[0] + xOffset, mag.location[1] + yOffset, mag.vThetaRatio} );
+                // magnetometerData.add(new int[] {mag.location[0] + xOffset, mag.location[1] + yOffset, mag.vThetaRatio} );
+                magnetometerData.add(new int[] {mag.location[0] + xOffset, mag.location[1] + yOffset, mag.x, mag.y, mag.z});
             }
         }
 

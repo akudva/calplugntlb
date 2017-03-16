@@ -25,6 +25,7 @@ import calplug.bluetoothsri.com.MAVLink.common.*;
 import calplug.bluetoothsri.heatMapUtility.ChartData;
 import calplug.bluetoothsri.heatMapUtility.HeatMapDataConstructor;
 import calplug.bluetoothsri.heatMapUtility.HeatMapHelper;
+import calplug.bluetoothsri.mathUtility.vectorMath;
 
 public class RSIViewerActivity extends ActionBarActivity {
 
@@ -48,9 +49,14 @@ public class RSIViewerActivity extends ActionBarActivity {
     private static Parser mavParser = new Parser();
 
     // Lists of our data
-    ArrayList<int[]> mostRecentData;
-    ArrayList<int[]> baselineData;
-    ArrayList<int[]> differencedData;
+    private ArrayList<int[]> mostRecentData;
+    private ArrayList<int[]> baselineData;
+    private ArrayList<int[]> differencedData;
+
+    // Write data to files for analysis later
+    private DataWriter dataWriter = new DataWriter();
+
+    private int maxMagnitude;
 
     // Some configuration data
     public enum Mode {
@@ -113,6 +119,15 @@ public class RSIViewerActivity extends ActionBarActivity {
         // Reset sample points
         mostRecentData = mat.getMagnetometerData();
 
+        if ( baselineData != null )
+        {
+            calculateDataDifference();
+        }
+        else
+        {
+            differencedData = (ArrayList<int[]>) mostRecentData.clone();
+        }
+
         // TODO: keep track of max theta value
 
 
@@ -129,17 +144,23 @@ public class RSIViewerActivity extends ActionBarActivity {
 
         // Reset samplePoints
         samplePoints = new ArrayList();
-        for (int[] data : mostRecentData)
+        for (int[] data : differencedData)
         {
+            // TODO: Write all sorts of data to a file, rather than just logging it
+            dataWriter.writeToFile(String.format("%d, %d, %d, %d, %d, ", data[0], data[1], data[2], data[3], data[4]), context);
+
             int magnetometerColumn = (int) (data[0] * xScale);
             int magnetometerRow = row - (int) (data[1] * yScale);
+            int theta = (int) vectorMath.getVectorThetaRatio(data[2], data[3], data[4]);
+
             String rowString = String.format("R%d", magnetometerRow);
             String colString = String.format("C%d", magnetometerColumn);
-            samplePoints.add(new ChartData(rowString, colString, data[2]));
-            Log.d("HEATMAP", String.format("Adding value %2d to row (%3d x %.3f = ) %2d and column (%3d x %.3f = ) %2d", data[2],
+            samplePoints.add(new ChartData(rowString, colString, theta));
+            Log.d("HEATMAP", String.format("Adding value %2d to row (%3d x %.3f = ) %2d and column (%3d x %.3f = ) %2d", theta,
                     data[0], xScale, magnetometerColumn,
                     data[1], yScale, magnetometerRow));
         }
+        dataWriter.writeToFile("\r\n", context);
 
         HeatMapDataConstructor mDataConstructor = new HeatMapDataConstructor(row, column, samplePoints);
 
@@ -152,6 +173,49 @@ public class RSIViewerActivity extends ActionBarActivity {
 
         // Request another message from the hub
         requestData();
+    }
+
+    protected void calculateDataDifference()
+    {
+        differencedData = new ArrayList<>();
+
+        for (int i = 0; i < mostRecentData.size(); ++i)
+        {
+            int[] mostRecentDatapoint = mostRecentData.get(i);
+            int[] baselineDatapoint = baselineData.get(i);
+
+            Log.d("CALC_DIFF", String.format("Most recent: Location - (%d, %d) : Values -  %d, %d, %d",
+                                                                        mostRecentData.get(i)[0]
+                                                                      , mostRecentData.get(i)[1]
+                                                                      , mostRecentData.get(i)[2]
+                                                                      , mostRecentData.get(i)[3]
+                                                                      , mostRecentData.get(i)[4]));
+
+            Log.d("CALC_DIFF", String.format("Baseline: Location - (%d, %d) : Values - %d, %d, %d",
+                                                                     baselineData.get(i)[0]
+                                                                   , baselineData.get(i)[1]
+                                                                   , baselineData.get(i)[2]
+                                                                   , baselineData.get(i)[3]
+                                                                   , baselineData.get(i)[4]));
+
+            int xDiff = mostRecentData.get(i)[2] - baselineData.get(i)[2];
+            int yDiff = mostRecentData.get(i)[3] - baselineData.get(i)[3];
+            int zDiff = mostRecentData.get(i)[4] - baselineData.get(i)[4];
+
+            differencedData.add
+                    (
+                        new int[]
+                        {
+                            mostRecentDatapoint[0],
+                            mostRecentDatapoint[1],
+                            mostRecentDatapoint[2] - baselineDatapoint[2],
+                            mostRecentDatapoint[3] - baselineDatapoint[3],
+                            mostRecentDatapoint[4] - baselineDatapoint[4]
+                        }
+                    );
+
+            Log.d("CALC_DIFF", String.format("Differenced: %d, %d, %d", xDiff, yDiff, zDiff));
+        }
     }
 
     // Request data from the Hub
@@ -242,6 +306,7 @@ public class RSIViewerActivity extends ActionBarActivity {
         buttonBaseline.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 // Have to do clone to make sure that dataArrayBefore doesn't just use the same reference
+                baselineData = (ArrayList<int[]>) mostRecentData.clone();
                 Toast.makeText(getApplicationContext(), "Saved baseline...",
                         Toast.LENGTH_LONG).show();
             }

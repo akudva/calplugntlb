@@ -48,7 +48,7 @@ public class Tile
             this.magnetometers[i].x = (int) magnetometerData[3*i];
             this.magnetometers[i].y = (int) magnetometerData[3*i + 1];
             this.magnetometers[i].z = (int) magnetometerData[3*i + 2];
-            this.magnetometers[i].updateVThetaRatio();
+            // this.magnetometers[i].updateVThetaRatio();
         }
     }
 

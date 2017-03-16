@@ -40,21 +40,7 @@
         android:text="@string/button_display_tile"
         android:id="@+id/submit" />
 
-    <Button
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:text="@string/button_display_mat"
-        android:id="@+id/matSubmit" />
-
-    <Button
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:text="@string/button_pair"
-        android:id="@+id/pair_button" />
-
-    <Button
+        <Button
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"

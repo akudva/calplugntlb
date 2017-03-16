@@ -32,29 +32,16 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/button_before"
-            android:id="@+id/button_before" />
+            android:text="@string/button_baseline"
+            android:id="@+id/button_baseline" />
 
         <Button
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/button_after"
-            android:id="@+id/button_after" />
+            android:text="@string/button_data_request"
+            android:id="@+id/button_data_request" />
 
-        <Button
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/button_compare"
-            android:id="@+id/button_compare" />
-
-        <Button
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/button_clear"
-            android:id="@+id/button_clear" />
     </LinearLayout>
 
 </RelativeLayout>

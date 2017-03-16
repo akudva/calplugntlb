@@ -37,23 +37,21 @@ public class RSIViewerActivity extends ActionBarActivity {
     private Context context = null;
     private static Parser mavParser = new Parser();
 
-    protected static int[] dataPoolArray; // the array to display
-    protected static int[] dataArrayBefore, dataArrayAfter; // pre-surgery and post-surgery data
-
-    protected static int method; // 0: tile, 1: mat
-    protected static boolean acquirePostSurgeryData = false;
-    protected static boolean hasPreSurgeryData = false;
-    protected static boolean hasPostSurgeryData = false;
-    protected static boolean hasDisplayedDiff = false;
     private static final String TAG = "RSIVIEWER";
 
-    private final int column = 100;
-    private final int row = 100;
+    private final int column = 60;
+    private final int row = 60;
     private final double dataRange = 90;
     private final int step = 10;
     private List<ChartData> samplePoints = new ArrayList();
-    private int max_theta = 0;
-    private int[] thetaList;
+
+    // These influence how many tiles and their locations
+    private final int numberTiles = 4;
+    private final int[][] tileLocations = {{0, 0}, {1, 0}, {1, 0}, {1, 1}};
+
+    ArrayList<int[]> mostRecentData;
+    ArrayList<int[]> baselineData;
+    ArrayList<int[]> differencedData;
 
     private Mat mat;
 
@@ -89,9 +87,7 @@ public class RSIViewerActivity extends ActionBarActivity {
         setButtonStyles(buttonAfter, buttonBefore, buttonCompare);
         setButtonClickEvents(buttonAfter, buttonBefore, buttonCompare, buttonClear);
 
-        // Initialize mat with one tile at "origin" with eight mag.'s and no accelerometer
-        int[][] tileLocations = {{0, 0}, {1, 0}, {0, 1}, {1, 1}};
-        mat = new Mat(4, tileLocations, ConfigurationDetails.tileModes.EIGHT_MAGNETOMETERS_SANS_ACCELEROMETER);
+        mat = new Mat(numberTiles, tileLocations, ConfigurationDetails.tileModes.EIGHT_MAGNETOMETERS_SANS_ACCELEROMETER);
 
         createHeatMap();
 
@@ -119,27 +115,34 @@ public class RSIViewerActivity extends ActionBarActivity {
         heatMap.setVerbose(false);
 
         // Reset sample points
-        samplePoints = new ArrayList();
-        ArrayList<int[]> magnetometerData = mat.getMagnetometerData();
+        mostRecentData = mat.getMagnetometerData();
 
         // TODO: keep track of max theta value
 
 
         // TODO: Check to make sure the data is actually 3 members long
         // Plot data in heatmap to scale
+        //
+        // NOTE: Here not only do we SCALE down the dimensions, we also have
+        // to flip the ROW (or y-coordinate) as this heatmap has the origin
+        // in the upper left and not the lower left
         float xScale = row / (float) mat.xDimension;
         float yScale = column / (float) mat.yDimension;
 
          Log.d("HEATMAP", String.format("Scale is (%d / %d = ) %.3f x (%d / %d = ) %.3f", row, mat.xDimension, xScale, column, mat.yDimension, yScale));
 
-        for (int[] data : magnetometerData)
+        // Reset samplePoints
+        samplePoints = new ArrayList();
+        for (int[] data : mostRecentData)
         {
-            String rowString = String.format("R%d", (int) (data[0] * xScale) );
-            String colString = String.format("C%d", (int) (data[1] * yScale) );
+            int magnetometerColumn = (int) (data[0] * xScale);
+            int magnetometerRow = row - (int) (data[1] * yScale);
+            String rowString = String.format("R%d", magnetometerRow);
+            String colString = String.format("C%d", magnetometerColumn);
             samplePoints.add(new ChartData(rowString, colString, data[2]));
             Log.d("HEATMAP", String.format("Adding value %2d to row (%3d x %.3f = ) %2d and column (%3d x %.3f = ) %2d", data[2],
-                    data[0], xScale, (int) (data[0] * xScale),
-                    data[1], yScale, (int) (data[1] * yScale)));
+                    data[0], xScale, magnetometerColumn,
+                    data[1], yScale, magnetometerRow));
         }
 
         HeatMapDataConstructor mDataConstructor = new HeatMapDataConstructor(row, column, samplePoints);
@@ -193,8 +196,10 @@ public class RSIViewerActivity extends ActionBarActivity {
             case msg_tile_measurements_eight.MAVLINK_MSG_ID_TILE_MEASUREMENTS_EIGHT:
             {
                 msg_tile_measurements_eight message = new msg_tile_measurements_eight(packet);
+
                 this.mat.updateTile(message.tile_number, message.mag_data);
-                if (message.tile_number == 3)
+
+                if (message.tile_number == numberTiles-1)
                 {
                     createHeatMap();
                 }
@@ -244,7 +249,6 @@ public class RSIViewerActivity extends ActionBarActivity {
         buttonBefore.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 // Have to do clone to make sure that dataArrayBefore doesn't just use the same reference
-                dataArrayBefore = dataPoolArray.clone();
                 Toast.makeText(getApplicationContext(), "Saved baseline...",
                         Toast.LENGTH_LONG).show();
             }
@@ -253,13 +257,13 @@ public class RSIViewerActivity extends ActionBarActivity {
         buttonAfter.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 // Reset the before data
-                dataArrayBefore = new int[dataPoolArray.length];
+                // dataArrayBefore = new int[dataPoolArray.length];
             }
         });
 
         buttonCompare.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                if (hasPreSurgeryData && hasPostSurgeryData) {
+//                if (hasPreSurgeryData && hasPostSurgeryData) {
                     // display difference between pre-surgery vectors and
                     // post-surgery vectors
                     //
@@ -269,26 +273,26 @@ public class RSIViewerActivity extends ActionBarActivity {
 //                    glIntent.putExtra("method", 1);
 //                    startActivity(glIntent);
 
-                    hasDisplayedDiff = true;
-                } else {
-                    Toast.makeText(getApplicationContext(), "Please select post surgery data.",
-                            Toast.LENGTH_LONG).show();
-                }
+//                    hasDisplayedDiff = true;
+//                } else {
+//                    Toast.makeText(getApplicationContext(), "Please select post surgery data.",
+//                            Toast.LENGTH_LONG).show();
+//                }
 
             }
         });
 
         buttonClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                hasPreSurgeryData = false;
-                hasPostSurgeryData = false;
-                acquirePostSurgeryData = false;
-                hasDisplayedDiff = false;
-                // acquire data
-                //
-                Intent mainIntent = new Intent(context, MainActivity.class);
-                acquirePostSurgeryData = true;
-                startActivity(mainIntent);
+//                hasPreSurgeryData = false;
+//                hasPostSurgeryData = false;
+//                acquirePostSurgeryData = false;
+//                hasDisplayedDiff = false;
+//                // acquire data
+//                //
+//                Intent mainIntent = new Intent(context, MainActivity.class);
+//                acquirePostSurgeryData = true;
+//                startActivity(mainIntent);
             }
         });
     }
@@ -303,34 +307,16 @@ public class RSIViewerActivity extends ActionBarActivity {
                                    Button buttonBefore,
                                    Button buttonCompare) {
 
-        if (hasPreSurgeryData && hasPostSurgeryData) {
-            buttonCompare.setEnabled(true);
-        } else {
-            buttonCompare.setEnabled(false);
-        }
-
-        if (hasDisplayedDiff) {
-            buttonBefore.setText(getString(R.string.button_show_before));
-            buttonAfter.setText(getString(R.string.button_show_after));
-        }
-    }
-
-    /**
-     * getVectorDifference shows the difference of vector arrays.
-     * This function adds the abs value of diff on base color (green)
-     * @param before vector array before surgery
-     * @param after vector array after surgery
-     * @return difference vector array
-     */
-    protected int[] getVectorDifference(int[] before, int[] after) {
-
-        int len = before.length;
-        int[] result = new int[len];
-        for (int i = 0; i < len; i++)
-        {
-            result[i] = after[i] - before[i];
-        }
-        return result;
+//        if (hasPreSurgeryData && hasPostSurgeryData) {
+//            buttonCompare.setEnabled(true);
+//        } else {
+//            buttonCompare.setEnabled(false);
+//        }
+//
+//        if (hasDisplayedDiff) {
+//            buttonBefore.setText(getString(R.string.button_show_before));
+//            buttonAfter.setText(getString(R.string.button_show_after));
+//        }
     }
 
     @Override

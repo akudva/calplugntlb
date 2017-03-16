@@ -1,7 +1,6 @@
 package calplug.bluetoothsri;
 
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -27,34 +26,33 @@ import calplug.bluetoothsri.heatMapUtility.ChartData;
 import calplug.bluetoothsri.heatMapUtility.HeatMapDataConstructor;
 import calplug.bluetoothsri.heatMapUtility.HeatMapHelper;
 
-/**
- * RSIViewerActivity create SRIViewerCanvas, implements vector calculations
- * @author Zhihao
- *
- */
 public class RSIViewerActivity extends ActionBarActivity {
 
     private Context context = null;
-    private static Parser mavParser = new Parser();
 
     private static final String TAG = "RSIVIEWER";
 
+    // Heatmap variables
     private final int column = 60;
     private final int row = 60;
     private final double dataRange = 90;
     private final int step = 10;
     private List<ChartData> samplePoints = new ArrayList();
 
-    // These influence how many tiles and their locations
+    // Mat and tile variables
+    private Mat mat;
     private final int numberTiles = 4;
     private final int[][] tileLocations = {{0, 0}, {1, 0}, {1, 0}, {1, 1}};
 
+    // MAVLink messages parser
+    private static Parser mavParser = new Parser();
+
+    // Lists of our data
     ArrayList<int[]> mostRecentData;
     ArrayList<int[]> baselineData;
     ArrayList<int[]> differencedData;
 
-    private Mat mat;
-
+    // Some configuration data
     public enum Mode {
         EIGHT_MAGS,
         EIGHT_MAGS_WITH_ACC,
@@ -79,13 +77,11 @@ public class RSIViewerActivity extends ActionBarActivity {
         JSONArray limits = new JSONArray();
 
         // Initialize buttons
-        final Button buttonBefore = (Button) findViewById(R.id.button_before);
-        final Button buttonAfter = (Button) findViewById(R.id.button_after);
-        final Button buttonCompare = (Button) findViewById(R.id.button_compare);
-        final Button buttonClear = (Button) findViewById(R.id.button_clear);
+        final Button buttonBaseline = (Button) findViewById(R.id.button_baseline);
+        final Button buttonDataRequest = (Button) findViewById(R.id.button_data_request);
 
-        setButtonStyles(buttonAfter, buttonBefore, buttonCompare);
-        setButtonClickEvents(buttonAfter, buttonBefore, buttonCompare, buttonClear);
+        setButtonStyles(buttonBaseline, buttonDataRequest);
+        setButtonClickEvents(buttonBaseline, buttonDataRequest);
 
         mat = new Mat(numberTiles, tileLocations, ConfigurationDetails.tileModes.EIGHT_MAGNETOMETERS_SANS_ACCELEROMETER);
 
@@ -147,14 +143,20 @@ public class RSIViewerActivity extends ActionBarActivity {
 
         HeatMapDataConstructor mDataConstructor = new HeatMapDataConstructor(row, column, samplePoints);
 
-        // For now just assume 90 is the highest theta value
-        heatMap.setLimitsHelper(step, 90);
+        // Let's go from 0 to 90 in steps of 10
+        heatMap.setLimitsHelper(step, dataRange);
         heatMap.setColsRowsHelper(row, column);
         heatMap.setDataHelper(mDataConstructor);
 
         // TODO: If a UI button is triggered, don't send a message
 
         // Request another message from the hub
+        requestData();
+    }
+
+    // Request data from the Hub
+    protected void requestData()
+    {
         String acquire = "2";
         try { ConnectionHandler.getInstance().sendBytes(acquire.getBytes()); }
         catch (IOException e) { e.printStackTrace(); }
@@ -235,18 +237,9 @@ public class RSIViewerActivity extends ActionBarActivity {
         }
     }
 
-    /**
-     * setButtonClickEvents initializes the functionality of buttons
-     * @param buttonAfter
-     * @param buttonBefore
-     * @param buttonCompare
-     * @param buttonClear
-     */
-    protected void setButtonClickEvents(final Button buttonAfter,
-                                        final Button buttonBefore,
-                                        final Button buttonCompare,
-                                        final Button buttonClear) {
-        buttonBefore.setOnClickListener(new View.OnClickListener() {
+    protected void setButtonClickEvents(final Button buttonBaseline,
+                                        final Button buttonDataRequest) {
+        buttonBaseline.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 // Have to do clone to make sure that dataArrayBefore doesn't just use the same reference
                 Toast.makeText(getApplicationContext(), "Saved baseline...",
@@ -254,69 +247,22 @@ public class RSIViewerActivity extends ActionBarActivity {
             }
         });
 
-        buttonAfter.setOnClickListener(new View.OnClickListener() {
+        buttonDataRequest.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                // Reset the before data
-                // dataArrayBefore = new int[dataPoolArray.length];
+                requestData();
             }
         });
 
-        buttonCompare.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-//                if (hasPreSurgeryData && hasPostSurgeryData) {
-                    // display difference between pre-surgery vectors and
-                    // post-surgery vectors
-                    //
-//                    dataPoolArray = getVectorDifference(dataArrayBefore, dataArrayAfter);
-//                    Intent glIntent = new Intent(context, RSIViewerActivity.class);
-//                    glIntent.putExtra("dataPoolArray", dataPoolArray);
-//                    glIntent.putExtra("method", 1);
-//                    startActivity(glIntent);
-
-//                    hasDisplayedDiff = true;
-//                } else {
-//                    Toast.makeText(getApplicationContext(), "Please select post surgery data.",
-//                            Toast.LENGTH_LONG).show();
-//                }
-
-            }
-        });
-
-        buttonClear.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-//                hasPreSurgeryData = false;
-//                hasPostSurgeryData = false;
-//                acquirePostSurgeryData = false;
-//                hasDisplayedDiff = false;
-//                // acquire data
-//                //
-//                Intent mainIntent = new Intent(context, MainActivity.class);
-//                acquirePostSurgeryData = true;
-//                startActivity(mainIntent);
-            }
-        });
     }
 
-    /**
-     * setButtonStyles initializes the style and text of buttons
-     * @param buttonAfter
-     * @param buttonBefore
-     * @param buttonCompare
-     */
-    protected void setButtonStyles(Button buttonAfter,
-                                   Button buttonBefore,
-                                   Button buttonCompare) {
+    protected void setButtonStyles(Button buttonBaseline,
+                                   Button buttonDataRequest) {
 
-//        if (hasPreSurgeryData && hasPostSurgeryData) {
-//            buttonCompare.setEnabled(true);
-//        } else {
-//            buttonCompare.setEnabled(false);
-//        }
-//
-//        if (hasDisplayedDiff) {
-//            buttonBefore.setText(getString(R.string.button_show_before));
-//            buttonAfter.setText(getString(R.string.button_show_after));
-//        }
+        // Setting enabled/disabled
+        // buttonCompare.setEnabled(true);
+
+        // Changing button text
+        // buttonBefore.setText(getString(R.string.button_show_before));
     }
 
     @Override

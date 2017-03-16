@@ -32,12 +32,6 @@ import calplug.bluetoothsri.bluetoothUtility.ConnectionStateChangedListener;
  */
 public class MainActivity extends ActionBarActivity {
 
-    private int toastShort = Toast.LENGTH_SHORT;
-    private CharSequence noEnoughData = "No enough data to process.";
-    private CharSequence wrongDataFormat = "Wrong data format.";
-
-    private static Parser mavParser = new Parser();
-
     private Context context = null;
     private EditText terminalRx = null;
 
@@ -54,9 +48,7 @@ public class MainActivity extends ActionBarActivity {
         // Initialize buttons
         //
         final Button tileButton = (Button) findViewById(R.id.submit);
-        final Button matButton = (Button) findViewById(R.id.matSubmit);
         final Button connectButton = (Button) findViewById(R.id.connect_button);
-        final Button pairButton = (Button) findViewById(R.id.pair_button);
 
         // Initialize Rx textEditor
         //
@@ -65,11 +57,11 @@ public class MainActivity extends ActionBarActivity {
 
         // Set button click events
         //
-        setButtonEvents(tileButton, matButton, connectButton, pairButton);
+        setButtonEvents(tileButton, connectButton);
 
         // set Bluetooth ConnectionHandler
         //
-        setBluetoothConnectionHandler(pairButton, connectButton);
+        setBluetoothConnectionHandler(connectButton);
     }
 
     protected void setupConnectPairDialog()
@@ -109,11 +101,9 @@ public class MainActivity extends ActionBarActivity {
 
     /**
      * set Bluetooth ConnectionHandler
-     * @param pairButton
      * @param connectButton
      */
-    private void setBluetoothConnectionHandler(final Button pairButton,
-                                               final Button connectButton) {
+    private void setBluetoothConnectionHandler( final Button connectButton) {
         // Bluetooth read
         ConnectionHandler.getInstance().addBluetoothConnectionListener
                 (new BluetoothConnectionListener() {
@@ -122,42 +112,6 @@ public class MainActivity extends ActionBarActivity {
                          runOnUiThread(new Runnable() {
                              @Override
                              public void run() {
-                                 //recieve incoming data and append to TerminalRX string
-
-                                 // Print out hex of the incoming data
-//                                 for (int i = 0; i < data.length; ++i) {
-//                                     String terminal_string = String.format("%02x ", data[i]);
-//                                     terminalRx.append(terminal_string);
-//                                 }
-
-//                                 // TODO: Figure out why we have to convert this to a ByteArrayInputStream
-//                                 InputStream is = new ByteArrayInputStream(data);
-//                                 try {
-//                                     while(is.available() > 0) {
-//                                         MAVLinkPacket packet = mavParser.mavlink_parse_char(is.read());
-//                                         if(packet != null){
-//                                             // terminalRx.append(String.format("msgid: %d", packet.msgid));
-//                                             msg_tile_measurements_eight rcvd_msg = new msg_tile_measurements_eight(packet);
-//                                             for (int i = 0; i < rcvd_msg.mag_data.length; ++i)
-//                                             {
-//                                                 terminalRx.append(String.format("%d", (int) rcvd_msg.mag_data[i]));
-//                                                 if ( (i+1) % 3 == 0)
-//                                                 {
-//                                                     terminalRx.append(";");
-//                                                 } else
-//                                                 {
-//                                                     terminalRx.append(",");
-//                                                 }
-//                                             }
-//                                             // terminalRx.append("");
-//                                             // terminalRx.append(rcvd_msg.toString());
-//                                         }
-//                                     }
-//                                     System.out.println("End tlog");
-//                                 } catch (IOException e) {
-//                                     e.printStackTrace();
-//                                 }
-
 
                              }
                          });
@@ -170,7 +124,6 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void stateChanged() {
                 boolean isConnected = ConnectionHandler.getInstance().isConnected();
-                pairButton.setText((isConnected) ? "Send" : "Pair");
                 connectButton.setText((isConnected) ? "Disconnect" : "Connect");
                 terminalRx.setText("");
             }
@@ -180,14 +133,10 @@ public class MainActivity extends ActionBarActivity {
     /**
      * Set button click events
      * @param tileButton
-     * @param matButton
      * @param connectButton
-     * @param pairButton
      */
     private void setButtonEvents(Button tileButton,
-                                 Button matButton,
-                                 Button connectButton,
-                                 Button pairButton) {
+                                 Button connectButton) {
         tileButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 // draw tile button
@@ -202,25 +151,6 @@ public class MainActivity extends ActionBarActivity {
                 Intent glIntent = new Intent(context, RSIViewerActivity.class);
                 glIntent.putExtra("dataPoolArray", dataPoolArray);
                 glIntent.putExtra("method", 0);
-                terminalRx.setText(""); // clear Rx text
-                startActivity(glIntent);
-            }
-        });
-
-        matButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                // draw mat button
-                //
-                int [] dataPoolArray = textDataParsing();
-                if (dataPoolArray[0] == -1) {
-                    // string parsing error, caused by wrong input format
-                    //
-                    return;
-                }
-                // Intent glIntent = new Intent(context, RSIViewerActivity.class);
-                Intent glIntent = new Intent(context, RSIViewerActivity.class);
-                glIntent.putExtra("dataPoolArray", dataPoolArray);
-                glIntent.putExtra("method", 1);
                 terminalRx.setText(""); // clear Rx text
                 startActivity(glIntent);
             }
@@ -247,28 +177,6 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
-        pairButton.setOnClickListener(new AlternateFunctionListener() {
-            @Override
-            public void OnClickSecondary () {
-                // send acquire signal to partner
-                //
-                String acquire = "2";
-                try {
-                    ConnectionHandler.getInstance().sendBytes(acquire.getBytes());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                terminalRx.setText("");
-            }
-
-            @Override
-            public void OnClickPrimary() {
-                // show pair activity
-                //
-                Intent pairIntent = new Intent(MainActivity.this, PairActivity.class);
-                startActivity(pairIntent);
-            }
-        });
     }
 
     /** @author Sahil
